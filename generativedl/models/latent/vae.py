@@ -8,56 +8,41 @@ import torch.nn.functional as F
 class CNNEncoder(nn.Module):
     def __init__(self, in_dim, latent_dim):
         super().__init__()
-        self.conv1 = nn.Conv2d(in_dim, 32, kernel_size=3, stride=1, padding=1)
-        self.relu1 = nn.ReLU()
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1)
-        self.relu2 = nn.ReLU()
-        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1)
-        self.relu3 = nn.ReLU()
-        self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1)
-        self.relu4 = nn.ReLU()
-        self.flatten = nn.Flatten()
-        self.linear = nn.Linear(4 * 4 * 256, 2 * latent_dim)
+        self.net = nn.Sequential(*[
+            nn.Conv2d(in_dim, 32, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(4 * 4 * 256, 2 * latent_dim),
+        ])
 
     def forward(self, x):
-        out = self.conv1(x)
-        out = self.relu1(out)
-        out = self.conv2(out)
-        out = self.relu2(out)
-        out = self.conv3(out)
-        out = self.relu3(out)
-        out = self.conv4(out)
-        out = self.relu4(out)
-        out = self.flatten(out)
-        mu, log_sigma = self.linear(out).chunk(2, dim=1)
+        mu, log_sigma = self.net(out).chunk(2, dim=1)
         return mu, log_sigma
 
 
 class CNNDecoder(nn.Module):
     def __init__(self, latent_dim, out_dim):
         super().__init__()
-        self.linear1 = nn.Linear(latent_dim, 4 * 4 * 128)
-        self.relu1 = nn.ReLU()
-        self.transpose_conv1 = nn.ConvTranspose2d(128, 128, kernel_size=4, stride=2, padding=1)
-        self.relu2 = nn.ReLU()
-        self.transpose_conv2 = nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1)
-        self.relu3 = nn.ReLU()
-        self.transpose_conv3 = nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1)
-        self.relu4 = nn.ReLU()
-        self.conv = nn.Conv2d(32, out_dim, kernel_size=3, stride=1, padding=1)
+        self.net = nn.Sequential(*[
+            nn.Linear(latent_dim, 4 * 4 * 128),
+            nn.ReLU(),
+            nn.ConvTranspose2d(128, 128, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, out_dim, kernel_size=3, stride=1, padding=1),
+        ])
 
     def forward(self, x):
-        out = self.linear1(x)
-        out = self.relu1(out)
-        out = out.view(-1, 128, 4, 4)
-        out = self.transpose_conv1(out)
-        out = self.relu2(out)
-        out = self.transpose_conv2(out)
-        out = self.relu3(out)
-        out = self.transpose_conv3(out)
-        out = self.relu4(out)
-        out = self.conv(out)
-        return out
+        return self.net(x)
 
 
 class CNNVAE(nn.Module):
