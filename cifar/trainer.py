@@ -5,7 +5,9 @@ import torch
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from torch import nn, optim
 
-CHECKPOINT_PATH = "../saved_models/tutorial5"
+from cifar.models import SolutionGoogleNet
+
+CHECKPOINT_PATH = "./saved_models/tutorial5"
 
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda:0")
@@ -17,7 +19,9 @@ else:
     DEVICE = torch.device("cpu")
     ACCELERATOR = "cpu"
 
-MODEL_DICT = {}
+MODEL_DICT = {
+    "GoogleNet": SolutionGoogleNet,
+}
 
 
 def create_model(model_name, model_hparams):

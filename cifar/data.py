@@ -5,7 +5,7 @@ from torchvision.datasets import CIFAR10
 
 from cifar.utils import set_seed
 
-DATASET_PATH = "../data"
+DATASET_PATH = "./data"
 
 
 def load_data():

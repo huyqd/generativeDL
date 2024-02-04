@@ -2,7 +2,6 @@ import matplotlib
 import pytorch_lightning as pl
 import seaborn as sns
 import torch
-from torch import nn
 
 from cifar.data import load_data
 from cifar.trainer import train_model
@@ -19,15 +18,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    act_fn_by_name = {
-        "tanh": nn.Tanh,
-        "relu": nn.ReLU,
-        "leakyrelu": nn.LeakyReLU,
-        "gelu": nn.GELU
-    }
-
     train_loader, val_loader, test_loader = load_data()
-    model, result = train_model("GoogleNet", train_loader, val_loader, test_loader)
     googlenet_model, googlenet_results = train_model(model_name="GoogleNet",
                                                      train_loader=train_loader,
                                                      val_loader=val_loader,
