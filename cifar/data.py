@@ -43,6 +43,7 @@ def load_data():
     )
     test_loader = data.DataLoader(
         test_set, batch_size=128, shuffle=False, drop_last=False, num_workers=4, persistent_workers=True,
+        
     )
 
     return train_loader, val_loader, test_loader
