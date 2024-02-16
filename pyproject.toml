@@ -14,8 +14,13 @@ seaborn = "^0.13.2"
 matplotlib = "^3.8.2"
 plotly = "^5.18.0"
 jupyter = "^1.0.0"
+ruff = "^0.2.1"
 
 [tool.poetry.dev-dependencies]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

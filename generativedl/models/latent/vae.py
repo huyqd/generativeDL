@@ -75,15 +75,13 @@ class CNNVAE(nn.Module):
 
         # Compute reconstruction loss - Note that it may be easier for you
         # to use torch.distributions.normal to compute the log_prob
-        recon_loss = F.mse_loss(x_hat, x, reduction='none').view(x.shape[0], -1).sum(1).mean()
+        recon_loss = F.mse_loss(x_hat, x, reduction="none").view(x.shape[0], -1).sum(1).mean()
 
         # Compute KL
-        kl_loss = -log_std_z - 0.5 + (torch.exp(2 * log_std_z) + mu_z ** 2) * 0.5
+        kl_loss = -log_std_z - 0.5 + (torch.exp(2 * log_std_z) + mu_z**2) * 0.5
         kl_loss = kl_loss.sum(1).mean()
 
-        return OrderedDict(
-            loss=recon_loss + kl_loss, recon_loss=recon_loss, kl_loss=kl_loss
-        )
+        return OrderedDict(loss=recon_loss + kl_loss, recon_loss=recon_loss, kl_loss=kl_loss)
 
     def sample(self, n, noise=True):
         with torch.no_grad():

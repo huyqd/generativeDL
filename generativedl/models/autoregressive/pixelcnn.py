@@ -1,16 +1,16 @@
 class MaskedConv2d(nn.Conv2d):
     def __init__(
-            self,
-            mask_type,
-            in_channels,
-            out_channels,
-            kernel_size,
-            stride=1,
-            padding=0,
-            dilation=1,
-            groups=1,
-            bias=True,
-            **kwargs,
+        self,
+        mask_type,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=1,
+        padding=0,
+        dilation=1,
+        groups=1,
+        bias=True,
+        **kwargs,
     ):
         super().__init__(
             in_channels,
@@ -45,9 +45,9 @@ class MaskedConv2d(nn.Conv2d):
 
 class LayerNorm(nn.LayerNorm):
     def __init__(
-            self,
-            in_shape,
-            **kwargs,
+        self,
+        in_shape,
+        **kwargs,
     ):
         super().__init__(in_shape, **kwargs)
 
@@ -61,10 +61,10 @@ class LayerNorm(nn.LayerNorm):
 
 class ResBlock(nn.Module):
     def __init__(
-            self,
-            in_channels,
-            kernel_size=7,
-            **kwargs,
+        self,
+        in_channels,
+        kernel_size=7,
+        **kwargs,
     ):
         super().__init__()
         self.in_channels = in_channels
@@ -108,13 +108,13 @@ class ResBlock(nn.Module):
 
 class PixelCNN(nn.Module):
     def __init__(
-            self,
-            input_shape,
-            n_colors,
-            kernel_size=7,
-            n_filters=64,
-            n_layers=5,
-            **kwargs,
+        self,
+        input_shape,
+        n_colors,
+        kernel_size=7,
+        n_filters=64,
+        n_layers=5,
+        **kwargs,
     ):
         super().__init__()
         self.input_shape = input_shape
@@ -187,8 +187,8 @@ class PixelCNN(nn.Module):
         return loss
 
     def sample(
-            self,
-            n,
+        self,
+        n,
     ):
         samples = torch.zeros(n, *self.input_shape).cuda()
         with torch.no_grad():
@@ -197,7 +197,5 @@ class PixelCNN(nn.Module):
                     for k in range(self.n_channels):
                         logits = self(samples)[:, :, k, r, c]
                         probs = F.softmax(logits, dim=1)
-                        samples[:, k, r, c] = torch.multinomial(
-                            probs, 1
-                        ).squeeze(-1)
+                        samples[:, k, r, c] = torch.multinomial(probs, 1).squeeze(-1)
         return samples.permute(0, 2, 3, 1).cpu().numpy()

@@ -31,20 +31,18 @@ class MaskedLinear(nn.Linear):
 
 class MADE(nn.Module):
     def __init__(
-            self,
-            input_shape,
-            d,
-            hidden_size=[512, 512, 512],
-            ordering=None,
-            one_hot_input=False,
+        self,
+        input_shape,
+        d,
+        hidden_size=[512, 512, 512],
+        ordering=None,
+        one_hot_input=False,
     ):
         # d: The number of possible discrete values for x_i
         super().__init__()
         self.input_shape = input_shape
         self.nin = np.prod(input_shape)
-        self.nout = (
-                self.nin * d
-        )  # if input is 2 pixel -> output d (possible values for 1 pixel) * 2
+        self.nout = self.nin * d  # if input is 2 pixel -> output d (possible values for 1 pixel) * 2
         self.d = d
         self.hidden_sizes = hidden_size
         self.ordering = np.arange(self.nin) if ordering is None else ordering
@@ -52,11 +50,7 @@ class MADE(nn.Module):
 
         # define a simple MLP neural net
         self.net = []
-        hs = (
-                [self.nin * d if one_hot_input else self.nin]
-                + self.hidden_sizes
-                + [self.nout]
-        )
+        hs = [self.nin * d if one_hot_input else self.nin] + self.hidden_sizes + [self.nout]
         for h0, h1 in zip(hs, hs[1:]):
             self.net.extend(
                 [
@@ -76,14 +70,10 @@ class MADE(nn.Module):
         # sample the order of the inputs and the connectivity of all neurons
         self.m[-1] = self.ordering
         for l in range(L):
-            self.m[l] = np.random.randint(
-                self.m[l - 1].min(), self.nin - 1, size=self.hidden_sizes[l]
-            )
+            self.m[l] = np.random.randint(self.m[l - 1].min(), self.nin - 1, size=self.hidden_sizes[l])
 
         # construct the mask matrices, or rather unmask, where True is a connection, while False means no connection
-        masks = [
-            self.m[l - 1][:, None] <= self.m[l][None, :] for l in range(L)
-        ]
+        masks = [self.m[l - 1][:, None] <= self.m[l][None, :] for l in range(L)]
         masks.append(self.m[L - 1][:, None] < self.m[-1][None, :])
 
         masks[-1] = np.repeat(masks[-1], self.d, axis=1)
@@ -108,9 +98,7 @@ class MADE(nn.Module):
         return (
             logits.permute(0, 2, 1)
             .contiguous()
-            .view(
-                batch_size, self.d, *self.input_shape
-            )  # refer to this page to see why we need to reshape this way
+            .view(batch_size, self.d, *self.input_shape)  # refer to this page to see why we need to reshape this way
             # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
         )
 
@@ -122,19 +110,15 @@ class MADE(nn.Module):
         self.inv_ordering = {x: i for i, x in enumerate(self.ordering)}
         with torch.no_grad():
             for i in range(self.nin):
-                logits = self(samples).view(n, self.d, self.nin)[
-                         :, :, self.inv_ordering[i]
-                         ]
+                logits = self(samples).view(n, self.d, self.nin)[:, :, self.inv_ordering[i]]
                 probs = F.softmax(logits, dim=1)
-                samples[:, self.inv_ordering[i]] = torch.multinomial(
-                    probs, 1
-                ).squeeze(-1)
+                samples[:, self.inv_ordering[i]] = torch.multinomial(probs, 1).squeeze(-1)
             samples = samples.view(n, *self.input_shape)
         return samples.cpu().numpy()
 
     def get_distribution(self):
         assert self.input_shape == (2,), "Only available for 2D joint"
-        x = np.mgrid[0: self.d, 0: self.d].reshape(2, self.d ** 2).T
+        x = np.mgrid[0 : self.d, 0 : self.d].reshape(2, self.d**2).T
         x = torch.LongTensor(x).cuda()
         log_probs = F.log_softmax(self(x), dim=1)
         distribution = torch.gather(log_probs, 1, x.unsqueeze(1)).squeeze(1)

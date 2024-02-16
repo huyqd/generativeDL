@@ -5,7 +5,7 @@ import torch
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from torch import nn, optim
 
-from cifar.models import SolutionGoogleNet
+from models import SolutionGoogleNet
 
 CHECKPOINT_PATH = "./saved_models/tutorial5"
 
@@ -28,11 +28,10 @@ def create_model(model_name, model_hparams):
     if model_name in MODEL_DICT:
         return MODEL_DICT[model_name](**model_hparams)
     else:
-        assert False, f"Unknown model name \"{model_name}\". Available models are: {str(MODEL_DICT.keys())}"
+        assert False, f'Unknown model name "{model_name}". Available models are: {str(MODEL_DICT.keys())}'
 
 
 class CIFARModule(pl.LightningModule):
-
     def __init__(self, model_name, model_hparams, optimizer_name, optimizer_hparams):
         """
         Inputs:
@@ -59,16 +58,14 @@ class CIFARModule(pl.LightningModule):
         # We will support Adam or SGD as optimizers.
         if self.hparams.optimizer_name == "Adam":
             # AdamW is Adam with a correct implementation of weight decay (see here for details: https://arxiv.org/pdf/1711.05101.pdf)
-            optimizer = optim.AdamW(
-                self.parameters(), **self.hparams.optimizer_hparams)
+            optimizer = optim.AdamW(self.parameters(), **self.hparams.optimizer_hparams)
         elif self.hparams.optimizer_name == "SGD":
             optimizer = optim.SGD(self.parameters(), **self.hparams.optimizer_hparams)
         else:
-            assert False, f"Unknown optimizer: \"{self.hparams.optimizer_name}\""
+            assert False, f'Unknown optimizer: "{self.hparams.optimizer_name}"'
 
         # We will reduce the learning rate by 0.1 after 100 and 150 epochs
-        scheduler = optim.lr_scheduler.MultiStepLR(
-            optimizer, milestones=[100, 150], gamma=0.1)
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150], gamma=0.1)
         return [optimizer], [scheduler]
 
     def training_step(self, batch, batch_idx):
@@ -79,8 +76,8 @@ class CIFARModule(pl.LightningModule):
         acc = (preds.argmax(dim=-1) == labels).float().mean()
 
         # Logs the accuracy per epoch to tensorboard (weighted average over batches)
-        self.log('train_acc', acc, on_step=False, on_epoch=True)
-        self.log('train_loss', loss)
+        self.log("train_acc", acc, on_step=False, on_epoch=True)
+        self.log("train_loss", loss)
         return loss  # Return tensor to call ".backward" on
 
     def validation_step(self, batch, batch_idx):
@@ -88,14 +85,14 @@ class CIFARModule(pl.LightningModule):
         preds = self.model(imgs).argmax(dim=-1)
         acc = (labels == preds).float().mean()
         # By default logs it per epoch (weighted average over batches)
-        self.log('val_acc', acc)
+        self.log("val_acc", acc)
 
     def test_step(self, batch, batch_idx):
         imgs, labels = batch
         preds = self.model(imgs).argmax(dim=-1)
         acc = (labels == preds).float().mean()
         # By default logs it per epoch (weighted average over batches), and returns it afterwards
-        self.log('test_acc', acc)
+        self.log("test_acc", acc)
 
 
 def train_model(model_name, train_loader, val_loader, test_loader, save_name=None, **kwargs):
@@ -108,15 +105,19 @@ def train_model(model_name, train_loader, val_loader, test_loader, save_name=Non
         save_name = model_name
 
     # Create a PyTorch Lightning trainer with the generation callback
-    trainer = pl.Trainer(default_root_dir=os.path.join(CHECKPOINT_PATH, save_name),  # Where to save models
-                         accelerator=ACCELERATOR,
-                         # We run on a GPU (if possible)
-                         devices=1,  # How many GPUs/CPUs we want to use (1 is enough for the notebooks)
-                         max_epochs=180,  # How many epochs to train for if no patience is set
-                         callbacks=[ModelCheckpoint(save_weights_only=True, mode="max", monitor="val_acc"),
-                                    # Save the best checkpoint based on the maximum val_acc recorded. Saves only weights and not optimizer
-                                    LearningRateMonitor("epoch")],  # Log learning rate every epoch
-                         enable_progress_bar=True)  # Set to False if you do not want a progress bar
+    trainer = pl.Trainer(
+        default_root_dir=os.path.join(CHECKPOINT_PATH, save_name),  # Where to save models
+        accelerator=ACCELERATOR,
+        # We run on a GPU (if possible)
+        devices=1,  # How many GPUs/CPUs we want to use (1 is enough for the notebooks)
+        max_epochs=180,  # How many epochs to train for if no patience is set
+        callbacks=[
+            ModelCheckpoint(save_weights_only=True, mode="max", monitor="val_acc"),
+            # Save the best checkpoint based on the maximum val_acc recorded. Saves only weights and not optimizer
+            LearningRateMonitor("epoch"),
+        ],  # Log learning rate every epoch
+        enable_progress_bar=True,
+    )  # Set to False if you do not want a progress bar
     trainer.logger._log_graph = True  # If True, we plot the computation graph in tensorboard
     trainer.logger._default_hp_metric = None  # Optional logging argument that we don't need
 
@@ -125,13 +126,15 @@ def train_model(model_name, train_loader, val_loader, test_loader, save_name=Non
     if os.path.isfile(pretrained_filename):
         print(f"Found pretrained model at {pretrained_filename}, loading...")
         model = CIFARModule.load_from_checkpoint(
-            pretrained_filename)  # Automatically loads the model with the saved hyperparameters
+            pretrained_filename
+        )  # Automatically loads the model with the saved hyperparameters
     else:
         pl.seed_everything(42)  # To be reproducable
         model = CIFARModule(model_name=model_name, **kwargs)
         trainer.fit(model, train_loader, val_loader)
         model = CIFARModule.load_from_checkpoint(
-            trainer.checkpoint_callback.best_model_path)  # Load best checkpoint after training
+            trainer.checkpoint_callback.best_model_path
+        )  # Load best checkpoint after training
 
     # Test best model on validation and test set
     val_result = trainer.test(model, val_loader, verbose=False)

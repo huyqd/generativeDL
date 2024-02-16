@@ -11,9 +11,7 @@ class Histogram(nn.Module):
         self.logits = nn.Parameter(torch.zeros(d), requires_grad=True)
 
     def loss(self, x):
-        logits = self.logits.unsqueeze(0).repeat(
-            x.shape[0], 1
-        )  # batch_size x d
+        logits = self.logits.unsqueeze(0).repeat(x.shape[0], 1)  # batch_size x d
         return F.cross_entropy(logits, x.long())
 
     def get_distribution(self):
@@ -29,9 +27,7 @@ class MixtureOfLogistics(nn.Module):
 
         self.pi = nn.Parameter(torch.randn(n_mixture), requires_grad=True)
         self.mu = nn.Parameter(torch.randn(n_mixture), requires_grad=True)
-        self.log_sigma = nn.Parameter(
-            torch.randn(n_mixture), requires_grad=True
-        )
+        self.log_sigma = nn.Parameter(torch.randn(n_mixture), requires_grad=True)
 
     def forward(self, x):
         x_rp = x.unsqueeze(1).repeat(1, self.n_mixture).float()
@@ -45,15 +41,9 @@ class MixtureOfLogistics(nn.Module):
         cdf_delta = cdf_plus - cdf_minus
 
         # probability dist for x = 0: taking all value from -inf -> 0
-        log_cdf_0 = torch.log(
-            torch.clamp(F.sigmoid(inv_sigma * (0.5 - mu)), min=1e-12)
-        )
+        log_cdf_0 = torch.log(torch.clamp(F.sigmoid(inv_sigma * (0.5 - mu)), min=1e-12))
         # probability dist for x = 0: taking all value from -inf -> 0
-        log_cdf_d_1 = torch.log(
-            torch.clamp(
-                1 - F.sigmoid(inv_sigma * (self.d - 1.5 - mu)), min=1e-12
-            )
-        )
+        log_cdf_d_1 = torch.log(torch.clamp(1 - F.sigmoid(inv_sigma * (self.d - 1.5 - mu)), min=1e-12))
 
         log_cdf_delta = torch.where(
             x_rp < 1e-3,
@@ -78,5 +68,3 @@ class MixtureOfLogistics(nn.Module):
             x = torch.FloatTensor(np.arange(self.d)).cuda()
             distribution = self(x).exp()
         return distribution.detach().cpu().numpy()
-
-
