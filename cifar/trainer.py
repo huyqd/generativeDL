@@ -1,8 +1,9 @@
+
 import os
 
-import pytorch_lightning as pl
+import lightning as L
 import torch
-from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
+from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from torch import nn, optim
 
 from models import SolutionGoogleNet
@@ -31,7 +32,7 @@ def create_model(model_name, model_hparams):
         assert False, f'Unknown model name "{model_name}". Available models are: {str(MODEL_DICT.keys())}'
 
 
-class CIFARModule(pl.LightningModule):
+class CIFARModule(L.LightningModule):
     def __init__(self, model_name, model_hparams, optimizer_name, optimizer_hparams):
         """
         Inputs:
@@ -76,8 +77,7 @@ class CIFARModule(pl.LightningModule):
         acc = (preds.argmax(dim=-1) == labels).float().mean()
 
         # Logs the accuracy per epoch to tensorboard (weighted average over batches)
-        self.log("train_acc", acc, on_step=False, on_epoch=True)
-        self.log("train_loss", loss)
+        self.log_dict({"train_acc": acc, "train_loss": loss}, on_step=False, on_epoch=True, prog_bar=True)
         return loss  # Return tensor to call ".backward" on
 
     def validation_step(self, batch, batch_idx):
@@ -85,7 +85,7 @@ class CIFARModule(pl.LightningModule):
         preds = self.model(imgs).argmax(dim=-1)
         acc = (labels == preds).float().mean()
         # By default logs it per epoch (weighted average over batches)
-        self.log("val_acc", acc)
+        self.log("val_acc", acc, on_epoch=True, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         imgs, labels = batch
@@ -95,7 +95,7 @@ class CIFARModule(pl.LightningModule):
         self.log("test_acc", acc)
 
 
-def train_model(model_name, train_loader, val_loader, test_loader, save_name=None, **kwargs):
+def train_model(model_name, train_loader, val_loader, test_loader, epochs=100, save_name=None, **kwargs):
     """
     Inputs:
         model_name - Name of the model you want to run. Is used to look up the class in "model_dict"
@@ -105,12 +105,12 @@ def train_model(model_name, train_loader, val_loader, test_loader, save_name=Non
         save_name = model_name
 
     # Create a PyTorch Lightning trainer with the generation callback
-    trainer = pl.Trainer(
+    trainer = L.Trainer(
         default_root_dir=os.path.join(CHECKPOINT_PATH, save_name),  # Where to save models
         accelerator=ACCELERATOR,
         # We run on a GPU (if possible)
         devices=1,  # How many GPUs/CPUs we want to use (1 is enough for the notebooks)
-        max_epochs=180,  # How many epochs to train for if no patience is set
+        max_epochs=epochs,  # How many epochs to train for if no patience is set
         callbacks=[
             ModelCheckpoint(save_weights_only=True, mode="max", monitor="val_acc"),
             # Save the best checkpoint based on the maximum val_acc recorded. Saves only weights and not optimizer
@@ -129,7 +129,7 @@ def train_model(model_name, train_loader, val_loader, test_loader, save_name=Non
             pretrained_filename
         )  # Automatically loads the model with the saved hyperparameters
     else:
-        pl.seed_everything(42)  # To be reproducable
+        L.seed_everything(42)  # To be reproducable
         model = CIFARModule(model_name=model_name, **kwargs)
         trainer.fit(model, train_loader, val_loader)
         model = CIFARModule.load_from_checkpoint(

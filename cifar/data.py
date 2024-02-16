@@ -36,14 +36,30 @@ def load_data():
     test_set = CIFAR10(root=DATASET_PATH, train=False, transform=test_transform, download=True)
 
     # We define a set of data loaders that we can use for various purposes later.
-    train_loader = data.DataLoader(train_set, batch_size=128, shuffle=True, drop_last=True, pin_memory=True,
-                                   num_workers=4, persistent_workers=True, )
+    train_loader = data.DataLoader(
+        train_set,
+        batch_size=128,
+        shuffle=True,
+        drop_last=True,
+        pin_memory=True,
+        num_workers=4,
+        persistent_workers=True,
+    )
     val_loader = data.DataLoader(
-        val_set, batch_size=128, shuffle=False, drop_last=False, num_workers=4, persistent_workers=True,
+        val_set,
+        batch_size=128,
+        shuffle=False,
+        drop_last=False,
+        num_workers=4,
+        persistent_workers=True,
     )
     test_loader = data.DataLoader(
-        test_set, batch_size=128, shuffle=False, drop_last=False, num_workers=4, persistent_workers=True,
-        
+        test_set,
+        batch_size=128,
+        shuffle=False,
+        drop_last=False,
+        num_workers=4,
+        persistent_workers=True,
     )
 
     return train_loader, val_loader, test_loader
