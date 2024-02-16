@@ -8,7 +8,6 @@ from utils import set_seed
 
 
 class CifarFlow(FlowSpec):
-
     @batch(cpu=8, memory=32 * 1024, gpu=1)
     @step
     def start(self):
