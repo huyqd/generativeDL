@@ -10,6 +10,7 @@ torch = "2.1.0"
 torchvision = "0.16.0"
 torchaudio = "^2.1.0"
 lightning = "^2.1.4"
+metaflow = "^2.11.2"
 
 [tool.poetry.dev-dependencies]
 seaborn = "^0.13.2"
