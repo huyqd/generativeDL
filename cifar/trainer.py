@@ -2,7 +2,7 @@ import os
 
 import lightning as L
 import torch
-from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
+from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
 from torch import nn, optim
 
 from models import SolutionGoogleNet
@@ -94,7 +94,9 @@ class CIFARModule(L.LightningModule):
         self.log("test_acc", acc)
 
 
-def train_model(model_name, train_loader, val_loader, test_loader, epochs=100, save_name=None, **kwargs):
+def train_model(
+    model_name, train_loader, val_loader, test_loader, epochs=100, save_name=None, trainer_args=None, **kwargs
+):
     """
     Inputs:
         model_name - Name of the model you want to run. Is used to look up the class in "model_dict"
@@ -102,6 +104,8 @@ def train_model(model_name, train_loader, val_loader, test_loader, epochs=100, s
     """
     if save_name is None:
         save_name = model_name
+
+    trainer_args = trainer_args or {}
 
     # Create a PyTorch Lightning trainer with the generation callback
     trainer = L.Trainer(
@@ -114,8 +118,10 @@ def train_model(model_name, train_loader, val_loader, test_loader, epochs=100, s
             ModelCheckpoint(save_weights_only=True, mode="max", monitor="val_acc"),
             # Save the best checkpoint based on the maximum val_acc recorded. Saves only weights and not optimizer
             LearningRateMonitor("epoch"),
+            EarlyStopping(monitor="val_acc", mode="max"),
         ],  # Log learning rate every epoch
         enable_progress_bar=True,
+        **trainer_args,
     )  # Set to False if you do not want a progress bar
     trainer.logger._log_graph = True  # If True, we plot the computation graph in tensorboard
     trainer.logger._default_hp_metric = None  # Optional logging argument that we don't need
@@ -139,5 +145,6 @@ def train_model(model_name, train_loader, val_loader, test_loader, epochs=100, s
     val_result = trainer.test(model, val_loader, verbose=False)
     test_result = trainer.test(model, test_loader, verbose=False)
     result = {"test": test_result[0]["test_acc"], "val": val_result[0]["test_acc"]}
+    print(result)
 
     return model, result

@@ -22,4 +22,5 @@ if __name__ == "__main__":
         model_hparams={"num_classes": 10, "act_fn_name": "relu"},
         optimizer_name="Adam",
         optimizer_hparams={"lr": 1e-3, "weight_decay": 1e-4},
+        # trainer_args={"overfit_batches": 10}
     )

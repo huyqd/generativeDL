@@ -7,8 +7,8 @@ from trainer import train_model
 from utils import set_seed
 
 
-class CifarFlow(FlowSpec):
-    @batch(cpu=8, memory=32 * 1024, gpu=1)
+class TrainFlow(FlowSpec):
+    @batch(cpu=8, memory=30 * 1024, gpu=1)
     @step
     def start(self):
         set_seed(42)
@@ -36,4 +36,4 @@ class CifarFlow(FlowSpec):
 
 
 if __name__ == "__main__":
-    CifarFlow()
+    TrainFlow()
