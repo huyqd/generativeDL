@@ -1,7 +1,7 @@
-from models.inception import SolutionGoogleNet
+from models.inception import GoogleNet
 from models.convnet import SimpleConvNet
 
 MODEL_DICT = {
-    "GoogleNet": SolutionGoogleNet,
+    "GoogleNet": GoogleNet,
     "SimpleConvNet": SimpleConvNet,
 }

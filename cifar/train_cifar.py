@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     train_loader, val_loader, test_loader = load_data()
     model, results = train_model(
-        model_name="SimpleConvNet",
+        model_name="GoogLeNet",
         train_loader=train_loader,
         val_loader=val_loader,
         test_loader=test_loader,
