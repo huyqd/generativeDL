@@ -5,7 +5,7 @@ from torchvision.datasets import MNIST
 DATASET_PATH = "../data/mnist"
 
 
-def load_data():
+def load_mnist_data():
     # Transformations applied on each image => make them a tensor and normalize between -1 and 1
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 

@@ -8,7 +8,7 @@ from utils import set_seed
 DATASET_PATH = "../data/cifar"
 
 
-def load_data():
+def load_cifar_data():
     train_dataset = CIFAR10(root=DATASET_PATH, train=True, download=True)
     DATA_MEANS = (train_dataset.data / 255.0).mean(axis=(0, 1, 2))
     DATA_STD = (train_dataset.data / 255.0).std(axis=(0, 1, 2))

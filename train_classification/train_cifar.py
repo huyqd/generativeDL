@@ -2,7 +2,7 @@ import lightning as L
 import torch
 
 from trainer import train_model
-from data import load_data
+from data import load_cifar_data
 from utils import set_seed
 
 if __name__ == "__main__":
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    train_loader, val_loader, test_loader = load_data()
+    train_loader, val_loader, test_loader = load_cifar_data()
     # model, results = train_model(
     #     model_name="GoogleNet",
     #     train_loader=train_loader,

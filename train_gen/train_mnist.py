@@ -1,10 +1,10 @@
 from trainer import train_model
-from data import load_data
+from data import load_mnist_data
 
 if __name__ == "__main__":
     from lightning.pytorch.callbacks import ModelSummary  # noqa
 
-    train_loader, test_loader = load_data()
+    train_loader, test_loader = load_mnist_data()
     model = train_model(
         train_loader=train_loader,
         test_loader=test_loader,
