@@ -6,7 +6,7 @@ from data import load_data
 from utils import set_seed
 
 if __name__ == "__main__":
-    from lightning.pytorch.callbacks import ModelSummary
+    from lightning.pytorch.callbacks import ModelSummary  # noqa
 
     set_seed(42)
     L.seed_everything(42)
@@ -16,14 +16,36 @@ if __name__ == "__main__":
     torch.backends.cudnn.benchmark = False
 
     train_loader, val_loader, test_loader = load_data()
+    # model, results = train_model(
+    #     model_name="GoogleNet",
+    #     train_loader=train_loader,
+    #     val_loader=val_loader,
+    #     test_loader=test_loader,
+    #     model_hparams={"num_classes": 10, "act_fn_name": "relu"},
+    #     optimizer_name="Adam",
+    #     optimizer_hparams={"lr": 1e-3, "weight_decay": 1e-4},
+    #     trainer_args={
+    #         "overfit_batches": 10,
+    #         "callbacks": [
+    #             ModelSummary(max_depth=-1),
+    #         ],
+    #     },
+    # )
+
     model, results = train_model(
-        model_name="GoogLeNet",
+        model_name="ResNet",
         train_loader=train_loader,
         val_loader=val_loader,
         test_loader=test_loader,
-        model_hparams={"num_classes": 10, "act_fn_name": "relu"},
-        optimizer_name="Adam",
-        optimizer_hparams={"lr": 1e-3, "weight_decay": 1e-4},
+        model_hparams={
+            "num_classes": 10,
+            "c_hidden": [16, 32, 64],
+            "num_blocks": [3, 3, 3],
+            "act_fn_name": "relu",
+            "resnet_block_name": "PreActResNetBlock",
+        },
+        optimizer_name="SGD",
+        optimizer_hparams={"lr": 0.1, "momentum": 0.9, "weight_decay": 1e-4},
         trainer_args={
             "overfit_batches": 10,
             "callbacks": [
