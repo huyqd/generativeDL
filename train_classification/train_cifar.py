@@ -1,7 +1,7 @@
 import lightning as L
 import torch
 
-from cifar.trainer import train_model
+from trainer import train_model
 from data import load_data
 from utils import set_seed
 

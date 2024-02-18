@@ -2,7 +2,7 @@ from torch.utils import data as data
 from torchvision import transforms
 from torchvision.datasets import MNIST
 
-DATASET_PATH = "./data"
+DATASET_PATH = "../data/mnist"
 
 
 def load_data():

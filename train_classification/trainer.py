@@ -7,7 +7,7 @@ from torch import nn, optim
 
 from models import MODEL_DICT
 
-CHECKPOINT_PATH = "./saved_models/"
+CHECKPOINT_PATH = "../data/saved_models/"
 
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda:0")
