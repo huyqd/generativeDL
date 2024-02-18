@@ -5,7 +5,7 @@ import torch
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
 from torch import nn, optim
 
-from models import SolutionGoogleNet
+from models import MODEL_DICT
 
 CHECKPOINT_PATH = "./saved_models/tutorial5"
 
@@ -18,10 +18,6 @@ elif torch.backends.mps.is_available():
 else:
     DEVICE = torch.device("cpu")
     ACCELERATOR = "cpu"
-
-MODEL_DICT = {
-    "GoogleNet": SolutionGoogleNet,
-}
 
 
 def create_model(model_name, model_hparams):
@@ -94,9 +90,7 @@ class CIFARModule(L.LightningModule):
         self.log("test_acc", acc)
 
 
-def train_model(
-    model_name, train_loader, val_loader, test_loader, epochs=100, save_name=None, trainer_args=None, **kwargs
-):
+def train_model(model_name, train_loader, val_loader, test_loader, save_name=None, trainer_args=None, **kwargs):
     """
     Inputs:
         model_name - Name of the model you want to run. Is used to look up the class in "model_dict"
@@ -106,25 +100,24 @@ def train_model(
         save_name = model_name
 
     trainer_args = trainer_args or {}
-
-    # Create a PyTorch Lightning trainer with the generation callback
-    trainer = L.Trainer(
+    default_trainer_args = dict(
         default_root_dir=os.path.join(CHECKPOINT_PATH, save_name),  # Where to save models
         accelerator=ACCELERATOR,
         # We run on a GPU (if possible)
         devices=1,  # How many GPUs/CPUs we want to use (1 is enough for the notebooks)
-        max_epochs=epochs,  # How many epochs to train for if no patience is set
+        max_epochs=100,  # How many epochs to train for if no patience is set
         callbacks=[
             ModelCheckpoint(save_weights_only=True, mode="max", monitor="val_acc"),
             # Save the best checkpoint based on the maximum val_acc recorded. Saves only weights and not optimizer
-            LearningRateMonitor("epoch"),
+            LearningRateMonitor("epoch"),  # Log learning rate every epoch
             EarlyStopping(monitor="val_acc", mode="max"),
-        ],  # Log learning rate every epoch
-        enable_progress_bar=True,
-        **trainer_args,
-    )  # Set to False if you do not want a progress bar
-    trainer.logger._log_graph = True  # If True, we plot the computation graph in tensorboard
-    trainer.logger._default_hp_metric = None  # Optional logging argument that we don't need
+        ],
+        enable_progress_bar=True,  # Set to False if you do not want a progress bar
+    )
+    default_trainer_args.update(trainer_args)
+
+    # Create a PyTorch Lightning trainer with the generation callback
+    trainer = L.Trainer(**default_trainer_args)
 
     # Check whether pretrained model exists. If yes, load it and skip training
     pretrained_filename = os.path.join(CHECKPOINT_PATH, save_name + ".ckpt")

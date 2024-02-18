@@ -20,6 +20,9 @@ jupyter = "^1.0.0"
 ruff = "^0.2.1"
 pre-commit = "^3.6.1"
 
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.2.2"
+
 [tool.ruff]
 line-length = 120
 target-version = "py310"
