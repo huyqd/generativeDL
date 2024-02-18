@@ -960,3 +960,4 @@ fabric.properties
 
 *data/*
 *.ckpt
+*.idea*
