@@ -959,3 +959,16 @@ fabric.properties
 .idea/caches/build_file_checksums.ser
 
 *data/*
+
+/cifar/data/cifar-10-batches-py/data_batch_1
+/mnist/data/cifar-10-batches-py/data_batch_1
+/cifar/data/cifar-10-batches-py/data_batch_2
+/mnist/data/cifar-10-batches-py/data_batch_2
+/cifar/data/cifar-10-batches-py/data_batch_3
+/mnist/data/cifar-10-batches-py/data_batch_3
+/cifar/data/cifar-10-batches-py/data_batch_4
+/mnist/data/cifar-10-batches-py/data_batch_4
+/cifar/data/cifar-10-batches-py/data_batch_5
+/mnist/data/cifar-10-batches-py/data_batch_5
+
+*.ckpt
