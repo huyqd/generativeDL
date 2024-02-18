@@ -2,6 +2,13 @@ import torch
 import numpy as np
 import random
 
+if torch.cuda.is_available():
+    device = torch.device("cuda:0")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
+
 
 class Sampler:
     def __init__(self, model, img_shape, sample_size, max_len=8192):

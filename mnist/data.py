@@ -25,6 +25,7 @@ def load_data():
         drop_last=True,
         num_workers=4,
         pin_memory=True,
+        persistent_workers=True,
     )
     test_loader = data.DataLoader(
         test_set,
@@ -32,6 +33,7 @@ def load_data():
         shuffle=False,
         drop_last=False,
         num_workers=4,
+        persistent_workers=True,
     )
 
     return train_loader, test_loader
