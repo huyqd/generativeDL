@@ -11,7 +11,7 @@ from torch import optim
 from models.convnet import CNNModel
 from models.sampler import Sampler
 
-CHECKPOINT_PATH = "./saved_models/"
+CHECKPOINT_PATH = "../data/saved_models/"
 
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda:0")
