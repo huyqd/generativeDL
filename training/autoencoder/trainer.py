@@ -13,9 +13,9 @@ from models.decoder import Decoder
 from models.encoder import Encoder
 from training.autoencoder.utils import get_train_images
 
-wandb_logger = WandbLogger(log_model=False, project="autoencoder_cifar10", save_dir="../../data/logs/")
+wandb_logger = WandbLogger(log_model=False, project="autoencoder_cifar10", save_dir="../../assets/logs/")
 
-CHECKPOINT_PATH = "../../data/saved_models/"
+CHECKPOINT_PATH = "../../assets/saved_models/"
 
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda:0")

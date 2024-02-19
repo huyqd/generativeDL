@@ -4,7 +4,7 @@ from torch.utils import data as data
 from torchvision import transforms
 from torchvision.datasets import CIFAR10
 
-CIFAR_DATASET_PATH = "../../data/cifar"
+CIFAR_DATASET_PATH = "../../assets/cifar"
 
 
 def load_cifar_data():

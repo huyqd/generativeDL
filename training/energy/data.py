@@ -3,8 +3,8 @@ from torch.utils import data as data
 from torchvision import transforms
 from torchvision.datasets import MNIST, CIFAR10
 
-MNIST_DATASET_PATH = "../../data/mnist"
-CIFAR_DATASET_PATH = "../../data/cifar"
+MNIST_DATASET_PATH = "../../assets/mnist"
+CIFAR_DATASET_PATH = "../../assets/cifar"
 
 
 def load_mnist_data():
