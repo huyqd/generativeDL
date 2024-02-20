@@ -4,16 +4,12 @@ import lightning as L
 import torch
 import torch.nn.functional as F
 import torchvision
-from lightning import Callback
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
-from torch import optim
+from torch import optim, nn
+from torch.utils import data
 
-from models.decoder import Decoder
-from models.encoder import Encoder
-from training.autoencoder.utils import get_train_images
-
-wandb_logger = WandbLogger(log_model=False, project="autoencoder_cifar10", save_dir="../../assets/logs/")
+wandb_logger = WandbLogger(log_model=False, project="simclr", save_dir="../../assets/logs/")
 
 CHECKPOINT_PATH = "../../assets/saved_models/"
 
@@ -28,108 +24,115 @@ else:
     ACCELERATOR = "cpu"
 
 
-class Autoencoder(L.LightningModule):
-    def __init__(
-        self,
-        c_out: int,
-        latent_dim: int,
-        encoder_class: callable = Encoder,
-        decoder_class: callable = Decoder,
-        c_in: int = 3,
-        width: int = 32,
-        height: int = 32,
-    ):
+class SimCLR(L.LightningModule):
+    def __init__(self, hidden_dim, lr, temperature, weight_decay, max_epochs=500):
         super().__init__()
-        # Saving hyperparameters of autoencoder
         self.save_hyperparameters()
-        # Creating encoder and decoder
-        self.encoder = encoder_class(c_in, c_out, latent_dim)
-        self.decoder = decoder_class(c_in, c_out, latent_dim)
-        # Example input array needed for visualizing the graph of the network
-        self.example_input_array = torch.zeros(2, c_in, width, height)
-
-    def forward(self, x):
-        """The forward function takes in an image and returns the reconstructed image."""
-        z = self.encoder(x)
-        x_hat = self.decoder(z)
-        return x_hat
-
-    def _get_reconstruction_loss(self, batch):
-        """Given a batch of images, this function returns the reconstruction loss (MSE in our case)."""
-        x, _ = batch  # We do not need the labels
-        x_hat = self.forward(x)
-        loss = F.mse_loss(x, x_hat, reduction="none")
-        loss = loss.sum(dim=[1, 2, 3]).mean(dim=[0])
-        return loss
+        assert self.hparams.temperature > 0.0, "The temperature must be a positive float!"
+        # Base model f(.)
+        self.convnet = torchvision.models.resnet18(num_classes=4 * hidden_dim)  # Output of last linear layer
+        # The MLP for g(.) consists of Linear->ReLU->Linear
+        self.convnet.fc = nn.Sequential(
+            self.convnet.fc,  # Linear(ResNet output, 4*hidden_dim)
+            nn.ReLU(inplace=True),
+            nn.Linear(4 * hidden_dim, hidden_dim),
+        )
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
-        # Using a scheduler is optional but can be helpful.
-        # The scheduler reduces the LR if the validation performance hasn't improved for the last N epochs
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=20, min_lr=5e-5)
-        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
+        optimizer = optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
+        lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=self.hparams.max_epochs, eta_min=self.hparams.lr / 50
+        )
+        return [optimizer], [lr_scheduler]
+
+    def info_nce_loss(self, batch, mode="train"):
+        imgs, _ = batch
+        imgs = torch.cat(imgs, dim=0)
+
+        # Encode all images
+        feats = self.convnet(imgs)
+        # Calculate cosine similarity
+        cos_sim = F.cosine_similarity(feats[:, None, :], feats[None, :, :], dim=-1)
+        # Mask out cosine similarity to itself
+        self_mask = torch.eye(cos_sim.shape[0], dtype=torch.bool, device=cos_sim.device)
+        cos_sim.masked_fill_(self_mask, -9e15)
+        # Find positive example -> batch_size//2 away from the original example
+        pos_mask = self_mask.roll(shifts=cos_sim.shape[0] // 2, dims=0)
+        # InfoNCE loss
+        cos_sim = cos_sim / self.hparams.temperature
+        nll = -cos_sim[pos_mask] + torch.logsumexp(cos_sim, dim=-1)
+        nll = nll.mean()
+
+        # Logging loss
+        self.log(mode + "_loss", nll)
+        # Get ranking position of positive example
+        comb_sim = torch.cat(
+            [
+                cos_sim[pos_mask][:, None],  # First position positive example
+                cos_sim.masked_fill(pos_mask, -9e15),
+            ],
+            dim=-1,
+        )
+        sim_argsort = comb_sim.argsort(dim=-1, descending=True).argmin(dim=-1)
+        # Logging ranking metrics
+        self.log(mode + "_acc_top1", (sim_argsort == 0).float().mean())
+        self.log(mode + "_acc_top5", (sim_argsort < 5).float().mean())
+        self.log(mode + "_acc_mean_pos", 1 + sim_argsort.float().mean())
+
+        return nll
 
     def training_step(self, batch, batch_idx):
-        loss = self._get_reconstruction_loss(batch)
-        self.log("train_loss", loss)
-        return loss
+        return self.info_nce_loss(batch, mode="train")
 
     def validation_step(self, batch, batch_idx):
-        loss = self._get_reconstruction_loss(batch)
-        self.log("val_loss", loss)
-
-    def test_step(self, batch, batch_idx):
-        loss = self._get_reconstruction_loss(batch)
-        self.log("test_loss", loss)
+        self.info_nce_loss(batch, mode="val")
 
 
-class GenerateCallback(Callback):
-    def __init__(self, input_imgs, every_n_epochs=1):
-        super().__init__()
-        self.input_imgs = input_imgs  # Images to reconstruct during training
-        # Only save those images every N epochs (otherwise tensorboard gets quite large)
-        self.every_n_epochs = every_n_epochs
-
-    def on_train_epoch_end(self, trainer, pl_module):
-        if trainer.current_epoch % self.every_n_epochs == 0:
-            # Reconstruct images
-            input_imgs = self.input_imgs.to(pl_module.device)
-            with torch.no_grad():
-                pl_module.eval()
-                reconst_imgs = pl_module(input_imgs)
-                pl_module.train()
-            # Plot and add to tensorboard
-            imgs = torch.stack([input_imgs, reconst_imgs], dim=1).flatten(0, 1)
-            grid = torchvision.utils.make_grid(imgs, nrow=2, normalize=True, value_range=(-1, 1))
-            wandb_logger.log_image(key="Reconstructions", images=[grid], step=trainer.global_step)
-
-
-def train_cifar(train_loader, val_loader, test_loader, latent_dim):
-    # Create a PyTorch Lightning trainer with the generation callback
+def train_simclr(unlabeled_data, train_data_contrast, batch_size, max_epochs=500, **kwargs):
     trainer = L.Trainer(
-        default_root_dir=os.path.join(CHECKPOINT_PATH, f"cifar10_{latent_dim}"),
-        logger=wandb_logger,
-        accelerator="auto",
+        default_root_dir=os.path.join(CHECKPOINT_PATH, "SimCLR"),
+        accelerator=ACCELERATOR,
         devices=1,
-        max_epochs=500,
+        max_epochs=max_epochs,
         callbacks=[
-            ModelCheckpoint(save_weights_only=True),
-            GenerateCallback(get_train_images(train_loader.dataset, 8), every_n_epochs=10),
+            ModelCheckpoint(save_weights_only=True, mode="max", monitor="val_acc_top5"),
             LearningRateMonitor("epoch"),
         ],
+        logger=wandb_logger,
     )
+    trainer.logger._default_hp_metric = None  # Optional logging argument that we don't need
 
     # Check whether pretrained model exists. If yes, load it and skip training
-    pretrained_filename = os.path.join(CHECKPOINT_PATH, "cifar10_%i.ckpt" % latent_dim)
+    pretrained_filename = os.path.join(CHECKPOINT_PATH, "SimCLR.ckpt")
     if os.path.isfile(pretrained_filename):
-        print("Found pretrained model, loading...")
-        model = Autoencoder.load_from_checkpoint(pretrained_filename)
+        print(f"Found pretrained model at {pretrained_filename}, loading...")
+        model = SimCLR.load_from_checkpoint(
+            pretrained_filename
+        )  # Automatically loads the model with the saved hyperparameters
     else:
-        model = Autoencoder(c_out=32, latent_dim=latent_dim)
+        train_loader = data.DataLoader(
+            unlabeled_data,
+            batch_size=batch_size,
+            shuffle=True,
+            drop_last=True,
+            pin_memory=True,
+            num_workers=4,
+            persistent_workers=True,
+        )
+        val_loader = data.DataLoader(
+            train_data_contrast,
+            batch_size=batch_size,
+            shuffle=False,
+            drop_last=False,
+            pin_memory=True,
+            num_workers=4,
+            persistent_workers=True,
+        )
+        L.seed_everything(42)  # To be reproducable
+        model = SimCLR(max_epochs=max_epochs, **kwargs)
         trainer.fit(model, train_loader, val_loader)
-    # Test best model on validation and test set
-    val_result = trainer.test(model, dataloaders=val_loader, verbose=False)
-    test_result = trainer.test(model, dataloaders=test_loader, verbose=False)
-    result = {"test": test_result, "val": val_result}
+        model = SimCLR.load_from_checkpoint(
+            trainer.checkpoint_callback.best_model_path
+        )  # Load best checkpoint after training
 
-    return model, result
+    return model

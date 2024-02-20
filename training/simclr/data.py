@@ -1,4 +1,3 @@
-from torch.utils import data as data
 from torchvision import transforms
 from torchvision.datasets import STL10
 
@@ -42,3 +41,5 @@ def load_data():
         download=True,
         transform=ContrastiveTransformations(contrast_transforms, n_views=2),
     )
+
+    return unlabeled_data, train_data_contrast
