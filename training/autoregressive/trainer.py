@@ -33,6 +33,7 @@ def train_autoregressive(train_loader, val_loader, test_loader, **kwargs):
             ModelCheckpoint(save_weights_only=True, mode="min", monitor="val_bpd"),
             LearningRateMonitor("epoch"),
         ],
+        logger=wandb_logger,
     )
     result = None
     # Check whether pretrained model exists. If yes, load it and skip training
