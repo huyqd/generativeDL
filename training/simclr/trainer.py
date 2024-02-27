@@ -100,7 +100,6 @@ def train_simclr(unlabeled_data, train_data_contrast, batch_size, max_epochs=500
         ],
         logger=wandb_logger,
     )
-    trainer.logger._default_hp_metric = None  # Optional logging argument that we don't need
 
     # Check whether pretrained model exists. If yes, load it and skip training
     pretrained_filename = os.path.join(CHECKPOINT_PATH, "SimCLR.ckpt")
@@ -133,6 +132,6 @@ def train_simclr(unlabeled_data, train_data_contrast, batch_size, max_epochs=500
         trainer.fit(model, train_loader, val_loader)
         model = SimCLR.load_from_checkpoint(
             trainer.checkpoint_callback.best_model_path
-        )  # Load best checkpoint after training
+        )  # Load the best checkpoint after training
 
     return model
