@@ -1,5 +1,8 @@
+import lightning as L
+
 from data import load_data
 from trainer import train_autoregressive
+from training.autoregressive.utils import show_imgs
 
 if __name__ == "__main__":
     from lightning.pytorch.callbacks import ModelSummary  # noqa
@@ -11,3 +14,7 @@ if __name__ == "__main__":
         "Test bits per dimension: %4.3fbpd"
         % (test_res["test_loss"] if "test_loss" in test_res else test_res["test_bpd"])
     )
+
+    L.seed_everything(1)
+    samples = model.sample(img_shape=(16, 1, 28, 28))
+    show_imgs(samples.cpu())
