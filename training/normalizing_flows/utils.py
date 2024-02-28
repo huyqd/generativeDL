@@ -6,8 +6,19 @@ import torch
 import torchvision
 from matplotlib.colors import to_rgb
 from torch import Tensor
+from tqdm import tqdm
 
 from training.normalizing_flows.models.dequantization import Dequantization
+
+if torch.cuda.is_available():
+    DEVICE = torch.device("cuda:0")
+    ACCELERATOR = "gpu"
+elif torch.backends.mps.is_available():
+    DEVICE = torch.device("mps")
+    ACCELERATOR = "mps"
+else:
+    DEVICE = torch.device("cpu")
+    ACCELERATOR = "cpu"
 
 
 def show_imgs(imgs, title=None, row_size=4):
@@ -72,15 +83,15 @@ def print_num_params(model):
     print(f"Number of parameters: {num_params:,}")
 
 
-def visualize_dequant_distribution(model: ImageFlow, imgs: Tensor, title: str = None):
+def visualize_dequant_distribution(model, imgs: Tensor, title: str = None):
     """Visualize dequant distribution.
 
     Args:
         model: The flow of which we want to visualize the dequantization distribution
         imgs: Example training images of which we want to visualize the dequantization distribution
     """
-    imgs = imgs.to(device)
-    ldj = torch.zeros(imgs.shape[0], dtype=torch.float32).to(device)
+    imgs = imgs.to(DEVICE)
+    ldj = torch.zeros(imgs.shape[0], dtype=torch.float32).to(DEVICE)
     with torch.no_grad():
         dequant_vals = []
         for _ in tqdm(range(8), leave=False):
@@ -88,7 +99,6 @@ def visualize_dequant_distribution(model: ImageFlow, imgs: Tensor, title: str = 
             dequant_vals.append(d)
         dequant_vals = torch.cat(dequant_vals, dim=0)
     dequant_vals = dequant_vals.view(-1).cpu().numpy()
-    sns.set()
     plt.figure(figsize=(10, 3))
     plt.hist(dequant_vals, bins=256, color=to_rgb("C0") + (0.5,), edgecolor="C0", density=True)
     if title is not None:
