@@ -6,7 +6,11 @@ import torch
 import torchvision
 from torch import Tensor
 
-from training.autoregressive.models.masked import HorizontalStackConvolution, VerticalStackConvolution
+from training.autoregressive.models.masked import (
+    HorizontalStackMaskedConvolution,
+    VerticalStackMaskedConvolution,
+    StackMaskedConvolution,
+)
 
 
 def show_imgs(imgs):
@@ -63,19 +67,36 @@ def show_center_recep_field(img, out):
 
 
 if __name__ == "__main__":
-    inp_img = torch.zeros(1, 1, 11, 11)
+    # %%
+    inp_img = torch.ones(1, 1, 11, 11)
     inp_img.requires_grad_()
     show_center_recep_field(inp_img, inp_img)
 
+    # %% Normal MaskedConvolution
+    masked_conv = StackMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
+    subsequent_masked_conv = StackMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
+    masked_conv.conv.weight.data.fill_(1)
+    masked_conv.conv.bias.data.fill_(0)
+    subsequent_masked_conv.conv.weight.data.fill_(1)
+    subsequent_masked_conv.conv.bias.data.fill_(0)
+    masked_img = masked_conv(inp_img)
+    show_center_recep_field(inp_img, masked_img)
+
+    # %% multiple StackMaskedConvolution
+    for l_idx in range(4):
+        masked_img = subsequent_masked_conv(masked_img)
+        print("Layer %i" % (l_idx + 2))
+        show_center_recep_field(inp_img, masked_img)
+
     # %% HorizontalStackConvolution
-    horiz_conv = HorizontalStackConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
+    horiz_conv = HorizontalStackMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
     horiz_conv.conv.weight.data.fill_(1)
     horiz_conv.conv.bias.data.fill_(0)
     horiz_img = horiz_conv(inp_img)
     show_center_recep_field(inp_img, horiz_img)
 
     # %% VerticalStackConvolution
-    vert_conv = VerticalStackConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
+    vert_conv = VerticalStackMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
     vert_conv.conv.weight.data.fill_(1)
     vert_conv.conv.bias.data.fill_(0)
     vert_img = vert_conv(inp_img)
@@ -87,10 +108,10 @@ if __name__ == "__main__":
 
     # %% layer
     # Initialize convolutions with equal weight to all input pixels
-    horiz_conv = HorizontalStackConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
+    horiz_conv = HorizontalStackMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
     horiz_conv.conv.weight.data.fill_(1)
     horiz_conv.conv.bias.data.fill_(0)
-    vert_conv = VerticalStackConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
+    vert_conv = VerticalStackMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
     vert_conv.conv.weight.data.fill_(1)
     vert_conv.conv.bias.data.fill_(0)
 

@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch import nn, optim
 from tqdm import tqdm
 
-from training.autoregressive.models.masked import VerticalStackConvolution, HorizontalStackConvolution
+from training.autoregressive.models.masked import VerticalStackMaskedConvolution, HorizontalStackMaskedConvolution
 
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda:0")
@@ -22,8 +22,8 @@ class GatedMaskedConv(nn.Module):
     def __init__(self, c_in, **kwargs):
         """Gated Convolution block implemented the computation graph shown above."""
         super().__init__()
-        self.conv_vert = VerticalStackConvolution(c_in, c_out=2 * c_in, **kwargs)
-        self.conv_horiz = HorizontalStackConvolution(c_in, c_out=2 * c_in, **kwargs)
+        self.conv_vert = VerticalStackMaskedConvolution(c_in, c_out=2 * c_in, **kwargs)
+        self.conv_horiz = HorizontalStackMaskedConvolution(c_in, c_out=2 * c_in, **kwargs)
         self.conv_vert_to_horiz = nn.Conv2d(2 * c_in, 2 * c_in, kernel_size=1, padding=0)
         self.conv_horiz_1x1 = nn.Conv2d(c_in, c_in, kernel_size=1, padding=0)
 
@@ -50,8 +50,8 @@ class PixelCNN(L.LightningModule):
         self.save_hyperparameters()
 
         # Initial convolutions skipping the center pixel
-        self.conv_vstack = VerticalStackConvolution(c_in, c_hidden, mask_center=True)
-        self.conv_hstack = HorizontalStackConvolution(c_in, c_hidden, mask_center=True)
+        self.conv_vstack = VerticalStackMaskedConvolution(c_in, c_hidden, mask_center=True)
+        self.conv_hstack = HorizontalStackMaskedConvolution(c_in, c_hidden, mask_center=True)
         # Convolution block of PixelCNN. We use dilation instead of downscaling
         self.conv_layers = nn.ModuleList(
             [
