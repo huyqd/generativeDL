@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 
-class MaskedConvolution(nn.Module):
+class BaseMaskedConvolution(nn.Module):
     def __init__(self, c_in, c_out, mask, **kwargs):
         """Implements a convolution with mask applied on its weights.
 
@@ -30,7 +30,7 @@ class MaskedConvolution(nn.Module):
         return self.conv(x)
 
 
-class StackMaskedConvolution(MaskedConvolution):
+class MaskedConvolution(BaseMaskedConvolution):
     def __init__(self, c_in, c_out, kernel_size=3, mask_center=False, **kwargs):
         mask = torch.ones(kernel_size, kernel_size)
         mask[(kernel_size // 2 + 1) :, :] = 0
@@ -43,7 +43,7 @@ class StackMaskedConvolution(MaskedConvolution):
         super().__init__(c_in, c_out, mask, **kwargs)
 
 
-class VerticalStackMaskedConvolution(MaskedConvolution):
+class VerticalMaskedConvolution(BaseMaskedConvolution):
     def __init__(self, c_in, c_out, kernel_size=3, mask_center=False, **kwargs):
         # Mask out all pixels below. For efficiency, we could also reduce the kernel
         # size in height, but for simplicity, we stick with masking here.
@@ -57,7 +57,7 @@ class VerticalStackMaskedConvolution(MaskedConvolution):
         super().__init__(c_in, c_out, mask, **kwargs)
 
 
-class HorizontalStackMaskedConvolution(MaskedConvolution):
+class HorizontalMaskedConvolution(BaseMaskedConvolution):
     def __init__(self, c_in, c_out, kernel_size=3, mask_center=False, **kwargs):
         # Mask out all pixels on the left. Note that our kernel has a size of 1
         # in height because we only look at the pixel in the same row.

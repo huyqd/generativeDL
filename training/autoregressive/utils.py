@@ -7,9 +7,9 @@ import torchvision
 from torch import Tensor
 
 from training.autoregressive.models.masked import (
-    HorizontalStackMaskedConvolution,
-    VerticalStackMaskedConvolution,
-    StackMaskedConvolution,
+    HorizontalMaskedConvolution,
+    VerticalMaskedConvolution,
+    MaskedConvolution,
 )
 
 
@@ -73,8 +73,8 @@ if __name__ == "__main__":
     show_center_recep_field(inp_img, inp_img)
 
     # %% Normal MaskedConvolution
-    masked_conv = StackMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
-    subsequent_masked_conv = StackMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
+    masked_conv = MaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
+    subsequent_masked_conv = MaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
     masked_conv.conv.weight.data.fill_(1)
     masked_conv.conv.bias.data.fill_(0)
     subsequent_masked_conv.conv.weight.data.fill_(1)
@@ -89,14 +89,14 @@ if __name__ == "__main__":
         show_center_recep_field(inp_img, masked_img)
 
     # %% HorizontalStackConvolution
-    horiz_conv = HorizontalStackMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
+    horiz_conv = HorizontalMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
     horiz_conv.conv.weight.data.fill_(1)
     horiz_conv.conv.bias.data.fill_(0)
     horiz_img = horiz_conv(inp_img)
     show_center_recep_field(inp_img, horiz_img)
 
     # %% VerticalStackConvolution
-    vert_conv = VerticalStackMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
+    vert_conv = VerticalMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
     vert_conv.conv.weight.data.fill_(1)
     vert_conv.conv.bias.data.fill_(0)
     vert_img = vert_conv(inp_img)
@@ -108,10 +108,10 @@ if __name__ == "__main__":
 
     # %% layer
     # Initialize convolutions with equal weight to all input pixels
-    horiz_conv = HorizontalStackMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
+    horiz_conv = HorizontalMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
     horiz_conv.conv.weight.data.fill_(1)
     horiz_conv.conv.bias.data.fill_(0)
-    vert_conv = VerticalStackMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
+    vert_conv = VerticalMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
     vert_conv.conv.weight.data.fill_(1)
     vert_conv.conv.bias.data.fill_(0)
 
@@ -123,6 +123,3 @@ if __name__ == "__main__":
         horiz_img = horiz_conv(horiz_img) + vert_img
         print("Layer %i" % (l_idx + 2))
         show_center_recep_field(inp_img, horiz_img)
-
-    # %%
-    show_center_recep_field(inp_img, vert_img)
