@@ -9,7 +9,7 @@ from torch import optim
 from torch.nn import functional as F
 from tqdm import tqdm
 
-from training.autoregressive.models.pixelcnn import GatedPixelCNN
+from training.autoregressive.models import MODEL_DICT
 
 wandb_logger = WandbLogger(log_model=False, project="autoregressive", save_dir="../../assets/logs/")
 
@@ -27,10 +27,10 @@ else:
 
 
 class ARModule(L.LightningModule):
-    def __init__(self, c_in, c_hidden):
+    def __init__(self, model_name, c_in, c_hidden):
         super().__init__()
         self.save_hyperparameters()
-        self.model = GatedPixelCNN(c_in, c_hidden)
+        self.model = MODEL_DICT[model_name](c_in, c_hidden)
         self.example_input_array = torch.randn(1, 1, 28, 28)
 
     def forward(self, x):
@@ -95,7 +95,14 @@ class ARModule(L.LightningModule):
         self.log("test_bpd", loss, prog_bar=True)
 
 
-def train_autoregressive(train_loader, val_loader, test_loader, debug=False, **kwargs):
+def train_autoregressive(
+    model_name,
+    train_loader,
+    val_loader,
+    test_loader,
+    debug=False,
+    **kwargs,
+):
     callbacks = [
         ModelCheckpoint(save_weights_only=True, mode="min", monitor="val_bpd"),
         LearningRateMonitor("epoch"),
@@ -126,7 +133,7 @@ def train_autoregressive(train_loader, val_loader, test_loader, debug=False, **k
         ckpt = torch.load(pretrained_filename, map_location=DEVICE)
         result = ckpt.get("result", None)
     else:
-        model = ARModule(**kwargs)
+        model = ARModule(model_name, **kwargs)
         trainer.fit(model, train_loader, val_loader)
     model = model.to(DEVICE)
 
