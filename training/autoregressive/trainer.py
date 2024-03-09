@@ -3,6 +3,8 @@ import os
 import lightning as L
 import numpy as np
 import torch
+import torchvision
+from lightning import Callback
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor, ModelSummary
 from lightning.pytorch.loggers import WandbLogger
 from torch import optim
@@ -63,7 +65,7 @@ class ARModule(L.LightningModule):
         if img is None:
             img = torch.zeros(img_shape, dtype=torch.long).to(DEVICE) - 1
         # Generation loop
-        for h in tqdm(range(img_shape[2]), leave=False):
+        for h in tqdm(range(img_shape[2]), leave=False, desc="Sampling images"):
             for w in range(img_shape[3]):
                 for c in range(img_shape[1]):
                     # Skip if not to be filled (-1)
@@ -95,6 +97,20 @@ class ARModule(L.LightningModule):
         self.log("test_bpd", loss, prog_bar=True)
 
 
+class GenerateCallback(Callback):
+    def __init__(self, every_n_epochs=1):
+        super().__init__()
+        self.every_n_epochs = every_n_epochs
+
+    def on_train_epoch_end(self, trainer, pl_module):
+        if trainer.current_epoch % self.every_n_epochs == 0:
+            samples = pl_module.sample(img_shape=(16, 1, 28, 28))
+            num_samples = samples.shape[0] if isinstance(samples, torch.Tensor) else len(samples)
+            nrow = min(num_samples, 4)
+            grid = torchvision.utils.make_grid(samples.cpu().float(), nrow=nrow, pad_value=128)
+            wandb_logger.log_image(key="Sampling", images=[grid], step=trainer.global_step)
+
+
 def train_autoregressive(
     model_name,
     train_loader,
@@ -106,6 +122,7 @@ def train_autoregressive(
     callbacks = [
         ModelCheckpoint(save_weights_only=True, mode="min", monitor="val_bpd"),
         LearningRateMonitor("epoch"),
+        GenerateCallback(every_n_epochs=1),
     ]
     logger = wandb_logger
     overfit_batches = 0
