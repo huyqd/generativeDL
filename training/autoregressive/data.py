@@ -27,7 +27,7 @@ def load_data():
     # We define a set of data loaders that we can use for various purposes later.
     train_loader = data.DataLoader(
         train_set,
-        batch_size=128,
+        batch_size=256,
         shuffle=True,
         drop_last=True,
         pin_memory=True,

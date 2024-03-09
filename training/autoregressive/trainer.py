@@ -5,12 +5,11 @@ import numpy as np
 import torch
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor, ModelSummary
 from lightning.pytorch.loggers import WandbLogger
-from torch import nn, optim
+from torch import optim
 from torch.nn import functional as F
 from tqdm import tqdm
 
-from training.autoregressive.models.masked import VerticalMaskedConvolution, HorizontalMaskedConvolution
-from training.autoregressive.models.pixelcnn import GatedMaskedConv
+from training.autoregressive.models.pixelcnn import GatedPixelCNN
 
 wandb_logger = WandbLogger(log_model=False, project="autoregressive", save_dir="../../assets/logs/")
 
@@ -31,25 +30,7 @@ class ARModule(L.LightningModule):
     def __init__(self, c_in, c_hidden):
         super().__init__()
         self.save_hyperparameters()
-
-        # Initial convolutions skipping the center pixel
-        self.conv_vstack = VerticalMaskedConvolution(c_in, c_hidden, mask_center=True)
-        self.conv_hstack = HorizontalMaskedConvolution(c_in, c_hidden, mask_center=True)
-        # Convolution block of PixelCNN. We use dilation instead of downscaling
-        self.conv_layers = nn.ModuleList(
-            [
-                GatedMaskedConv(c_hidden),
-                GatedMaskedConv(c_hidden, dilation=2),
-                GatedMaskedConv(c_hidden),
-                GatedMaskedConv(c_hidden, dilation=4),
-                GatedMaskedConv(c_hidden),
-                GatedMaskedConv(c_hidden, dilation=2),
-                GatedMaskedConv(c_hidden),
-            ]
-        )
-        # Output classification convolution (1x1)
-        self.conv_out = nn.Conv2d(c_hidden, c_in * 256, kernel_size=1, padding=0)
-
+        self.model = GatedPixelCNN(c_in, c_hidden)
         self.example_input_array = torch.randn(1, 1, 28, 28)
 
     def forward(self, x):
@@ -59,23 +40,9 @@ class ARModule(L.LightningModule):
             x: Image tensor with integer values between 0 and 255.
         """
         # Scale input from 0 to 255 back to -1 to 1
-        x = (x.float() / 255.0) * 2 - 1
+        return self.model(x)
 
-        # Initial convolutions
-        v_stack = self.conv_vstack(x)
-        h_stack = self.conv_hstack(x)
-        # Gated Convolutions
-        for layer in self.conv_layers:
-            v_stack, h_stack = layer(v_stack, h_stack)
-        # 1x1 classification convolution
-        # Apply ELU before 1x1 convolution for non-linearity on residual connection
-        out = self.conv_out(F.elu(h_stack))
-
-        # Output dimensions: [Batch, Classes, Channels, Height, Width]
-        out = out.reshape(out.shape[0], 256, out.shape[1] // 256, out.shape[2], out.shape[3])
-        return out
-
-    def calc_likelihood(self, x):
+    def likelihood(self, x):
         # Forward pass with bpd likelihood calculation
         pred = self.forward(x)
         nll = F.cross_entropy(pred, x, reduction="none")
@@ -104,7 +71,7 @@ class ARModule(L.LightningModule):
                         continue
                     # For efficiency, we only have to input the upper part of the image
                     # as all other parts will be skipped by the masked convolutions anyway
-                    pred = self.forward(img[:, :, : h + 1, :])
+                    pred = self(img[:, :, : h + 1, :])
                     probs = F.softmax(pred[:, :, c, h, w], dim=-1)
                     img[:, c, h, w] = torch.multinomial(probs, num_samples=1).squeeze(dim=-1)
         return img
@@ -115,16 +82,16 @@ class ARModule(L.LightningModule):
         return [optimizer], [scheduler]
 
     def training_step(self, batch, batch_idx):
-        loss = self.calc_likelihood(batch[0])
+        loss = self.likelihood(batch[0])
         self.log("train_bpd", loss, prog_bar=True, on_step=True, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        loss = self.calc_likelihood(batch[0])
+        loss = self.likelihood(batch[0])
         self.log("val_bpd", loss, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
-        loss = self.calc_likelihood(batch[0])
+        loss = self.likelihood(batch[0])
         self.log("test_bpd", loss, prog_bar=True)
 
 
