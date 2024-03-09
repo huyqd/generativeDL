@@ -3,7 +3,7 @@ import os
 import lightning as L
 import numpy as np
 import torch
-from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
+from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor, ModelSummary
 from lightning.pytorch.loggers import WandbLogger
 from torch import nn, optim
 from torch.nn import functional as F
@@ -103,7 +103,7 @@ class ARModule(L.LightningModule):
                     if (img[:, c, h, w] != -1).all().item():
                         continue
                     # For efficiency, we only have to input the upper part of the image
-                    # as all other parts will be skipped by the masked convolutions anyways
+                    # as all other parts will be skipped by the masked convolutions anyway
                     pred = self.forward(img[:, :, : h + 1, :])
                     probs = F.softmax(pred[:, :, c, h, w], dim=-1)
                     img[:, c, h, w] = torch.multinomial(probs, num_samples=1).squeeze(dim=-1)
@@ -116,30 +116,39 @@ class ARModule(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         loss = self.calc_likelihood(batch[0])
-        self.log("train_bpd", loss)
+        self.log("train_bpd", loss, prog_bar=True, on_step=True, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         loss = self.calc_likelihood(batch[0])
-        self.log("val_bpd", loss)
+        self.log("val_bpd", loss, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         loss = self.calc_likelihood(batch[0])
-        self.log("test_bpd", loss)
+        self.log("test_bpd", loss, prog_bar=True)
 
 
-def train_autoregressive(train_loader, val_loader, test_loader, **kwargs):
+def train_autoregressive(train_loader, val_loader, test_loader, debug=False, **kwargs):
+    callbacks = [
+        ModelCheckpoint(save_weights_only=True, mode="min", monitor="val_bpd"),
+        LearningRateMonitor("epoch"),
+    ]
+    logger = wandb_logger
+    overfit_batches = 0
+    if debug:
+        callbacks += [ModelSummary(max_depth=-1)]
+        logger = None
+        overfit_batches = 10
+
     # Create a PyTorch Lightning trainer with the generation callback
     trainer = L.Trainer(
         default_root_dir=os.path.join(CHECKPOINT_PATH, "PixelCNN"),
         accelerator=ACCELERATOR,
         devices=1,
         max_epochs=150,
-        callbacks=[
-            ModelCheckpoint(save_weights_only=True, mode="min", monitor="val_bpd"),
-            LearningRateMonitor("epoch"),
-        ],
-        logger=wandb_logger,
+        callbacks=callbacks,
+        logger=logger,
+        overfit_batches=overfit_batches,
     )
     result = None
     # Check whether pretrained model exists. If yes, load it and skip training

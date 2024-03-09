@@ -5,8 +5,6 @@ from trainer import train_autoregressive
 from training.autoregressive.utils import show_imgs
 
 if __name__ == "__main__":
-    from lightning.pytorch.callbacks import ModelSummary  # noqa
-
     train_loader, val_loader, test_loader = load_data()
     model, result = train_autoregressive(train_loader, val_loader, test_loader, c_in=1, c_hidden=64)
     test_res = result["test"][0]
