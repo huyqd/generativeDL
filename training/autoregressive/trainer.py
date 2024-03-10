@@ -106,7 +106,7 @@ class GenerateCallback(Callback):
     def _log_sampling_images(trainer, pl_module, n_images=16):
         samples = pl_module.sample(img_shape=(n_images, 1, 28, 28))
         nrow = min(n_images, 8)
-        grid = torchvision.utils.make_grid(samples.cpu().float(), nrow=n_images, pad_value=128)
+        grid = torchvision.utils.make_grid(samples.cpu().float(), nrow=nrow, pad_value=128)
         wandb_logger.log_image(key="Sampling", images=[grid], step=trainer.global_step)
 
     def on_fit_start(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
@@ -146,7 +146,7 @@ def train_autoregressive(
         default_root_dir=os.path.join(CHECKPOINT_PATH, "PixelCNN"),
         accelerator=ACCELERATOR,
         devices=1,
-        max_epochs=150,
+        max_epochs=10,
         callbacks=callbacks,
         logger=logger,
         overfit_batches=overfit_batches,

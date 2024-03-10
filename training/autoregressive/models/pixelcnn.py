@@ -17,13 +17,21 @@ class PixelCNN(nn.Module):
         self.conv_layers = nn.Sequential(
             *[
                 MaskedConvolution(c_in, c_hidden, mask_center=True),
+                nn.ReLU(),
                 MaskedConvolution(c_hidden, c_hidden),
+                nn.ReLU(),
                 MaskedConvolution(c_hidden, c_hidden, dilation=2),
+                nn.ReLU(),
                 MaskedConvolution(c_hidden, c_hidden),
+                nn.ReLU(),
                 MaskedConvolution(c_hidden, c_hidden, dilation=4),
+                nn.ReLU(),
                 MaskedConvolution(c_hidden, c_hidden),
+                nn.ReLU(),
                 MaskedConvolution(c_hidden, c_hidden, dilation=2),
+                nn.ReLU(),
                 MaskedConvolution(c_hidden, c_hidden),
+                nn.ReLU(),
             ]
         )
         # Output classification convolution (1x1)
