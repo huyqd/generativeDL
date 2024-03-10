@@ -102,13 +102,18 @@ class GenerateCallback(Callback):
         super().__init__()
         self.every_n_epochs = every_n_epochs
 
+    @staticmethod
+    def _log_sampling_images(trainer, pl_module, n_images=16):
+        samples = pl_module.sample(img_shape=(n_images, 1, 28, 28))
+        grid = torchvision.utils.make_grid(samples.cpu().float(), nrow=n_images, pad_value=128)
+        wandb_logger.log_image(key="Sampling", images=[grid], step=trainer.global_step)
+
+    def on_fit_start(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
+        self._log_sampling_images(trainer, pl_module)
+
     def on_train_epoch_end(self, trainer, pl_module):
         if trainer.current_epoch % self.every_n_epochs == 0:
-            samples = pl_module.sample(img_shape=(16, 1, 28, 28))
-            num_samples = samples.shape[0] if isinstance(samples, torch.Tensor) else len(samples)
-            nrow = min(num_samples, 4)
-            grid = torchvision.utils.make_grid(samples.cpu().float(), nrow=nrow, pad_value=128)
-            wandb_logger.log_image(key="Sampling", images=[grid], step=trainer.global_step)
+            self._log_sampling_images(trainer, pl_module)
 
 
 def train_autoregressive(
@@ -130,6 +135,10 @@ def train_autoregressive(
         callbacks += [ModelSummary(max_depth=-1)]
         logger = None
         overfit_batches = 10
+
+    imgs = [train_loader.dataset[i][0].float() for i in range(32)]
+    img_grid = torchvision.utils.make_grid(imgs, nrow=16, value_range=(0, 255))
+    wandb_logger.log_image(key="Training data", images=[img_grid])
 
     # Create a PyTorch Lightning trainer with the generation callback
     trainer = L.Trainer(
