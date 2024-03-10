@@ -7,7 +7,7 @@ from training.autoregressive.utils import show_imgs
 if __name__ == "__main__":
     train_loader, val_loader, test_loader = load_data()
     model, result = train_autoregressive(
-        "PixelCNN",
+        "GatedPixelCNN",
         train_loader,
         val_loader,
         test_loader,

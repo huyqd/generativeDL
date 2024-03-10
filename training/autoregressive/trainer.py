@@ -146,7 +146,7 @@ def train_autoregressive(
         default_root_dir=os.path.join(CHECKPOINT_PATH, "PixelCNN"),
         accelerator=ACCELERATOR,
         devices=1,
-        max_epochs=10,
+        max_epochs=50,
         callbacks=callbacks,
         logger=logger,
         overfit_batches=overfit_batches,
