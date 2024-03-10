@@ -12,9 +12,14 @@ def discretize(sample):
     return (sample * 255).to(torch.long)
 
 
+def quantize(sample):
+    return (sample > 0).to(torch.long)
+
+
 def load_data():
     # Transformations applied on each image => only make them a tensor
     transform = transforms.Compose([transforms.ToTensor(), discretize])
+    # transform = transforms.Compose([transforms.ToTensor(), quantize])
 
     # Loading the training dataset. We need to split it into a training and validation part
     train_dataset = MNIST(root=DATASET_PATH, train=True, transform=transform, download=True)

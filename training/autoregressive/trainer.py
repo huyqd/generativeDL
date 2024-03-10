@@ -27,6 +27,9 @@ else:
     DEVICE = torch.device("cpu")
     ACCELERATOR = "cpu"
 
+# DEVICE = torch.device("cpu")
+# ACCELERATOR = "cpu"
+
 
 class ARModule(L.LightningModule):
     def __init__(self, model_name, c_in, c_hidden):
@@ -74,7 +77,7 @@ class ARModule(L.LightningModule):
                     # For efficiency, we only have to input the upper part of the image
                     # as all other parts will be skipped by the masked convolutions anyway
                     pred = self(img[:, :, : h + 1, :])
-                    probs = F.softmax(pred[:, :, c, h, w], dim=-1)
+                    probs = F.softmax(pred[:, :, c, h, w], dim=1)
                     img[:, c, h, w] = torch.multinomial(probs, num_samples=1).squeeze(dim=-1)
         return img
 
@@ -106,7 +109,8 @@ class GenerateCallback(Callback):
     def _log_sampling_images(trainer, pl_module, n_images=16):
         samples = pl_module.sample(img_shape=(n_images, 1, 28, 28))
         nrow = min(n_images, 8)
-        grid = torchvision.utils.make_grid(samples.cpu().float(), nrow=nrow, pad_value=128)
+        # grid = torchvision.utils.make_grid(samples.float(), nrow=nrow)
+        grid = torchvision.utils.make_grid(samples.float(), nrow=nrow, pad_value=128)
         wandb_logger.log_image(key="Sampling", images=[grid], step=trainer.global_step)
 
     def on_fit_start(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
@@ -138,6 +142,7 @@ def train_autoregressive(
         overfit_batches = 10
 
     imgs = [train_loader.dataset[i][0].float() for i in range(32)]
+    # img_grid = torchvision.utils.make_grid(imgs, nrow=8)
     img_grid = torchvision.utils.make_grid(imgs, nrow=8, value_range=(0, 255))
     wandb_logger.log_image(key="Training data", images=[img_grid])
 

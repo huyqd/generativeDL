@@ -36,6 +36,7 @@ class PixelCNN(nn.Module):
         )
         # Output classification convolution (1x1)
         self.conv_out = nn.Conv2d(c_hidden, c_in * 256, kernel_size=1, padding=0)
+        # self.conv_out = nn.Conv2d(c_hidden, c_in * 2, kernel_size=1, padding=0)
 
     def forward(self, x):
         """Forward image through model and return logits for each pixel.
@@ -45,6 +46,7 @@ class PixelCNN(nn.Module):
         """
         # Scale input from 0 to 255 back to -1 to 1
         x = (x.float() / 255.0) * 2 - 1
+        # x = (x.float() - 0.5) / 0.5
 
         out = self.conv_layers(x)
         # 1x1 classification convolution
@@ -53,6 +55,7 @@ class PixelCNN(nn.Module):
 
         # Output dimensions: [Batch, Classes, Channels, Height, Width]
         out = out.reshape(out.shape[0], 256, out.shape[1] // 256, out.shape[2], out.shape[3])
+        # out = out.reshape(out.shape[0], 2, out.shape[1] // 2, out.shape[2], out.shape[3])
 
         return out
 
@@ -77,6 +80,7 @@ class GatedPixelCNN(nn.Module):
         )
         # Output classification convolution (1x1)
         self.conv_out = nn.Conv2d(c_hidden, c_in * 256, kernel_size=1, padding=0)
+        # self.conv_out = nn.Conv2d(c_hidden, c_in * 2, kernel_size=1, padding=0)
 
     def forward(self, x):
         """Forward image through model and return logits for each pixel.
@@ -86,6 +90,7 @@ class GatedPixelCNN(nn.Module):
         """
         # Scale input from 0 to 255 back to -1 to 1
         x = (x.float() / 255.0) * 2 - 1
+        # x = (x.float() - 0.5) / 0.5
 
         # Initial convolutions
         v_stack = self.conv_vstack(x)
@@ -99,5 +104,6 @@ class GatedPixelCNN(nn.Module):
 
         # Output dimensions: [Batch, Classes, Channels, Height, Width]
         out = out.reshape(out.shape[0], 256, out.shape[1] // 256, out.shape[2], out.shape[3])
+        # out = out.reshape(out.shape[0], 2, out.shape[1] // 2, out.shape[2], out.shape[3])
 
         return out
