@@ -4,7 +4,7 @@ from trainer import train_autoregressive
 if __name__ == "__main__":
     train_loader, val_loader, test_loader = load_data()
     model, result = train_autoregressive(
-        "GatedPixelCNN",
+        "PixelCNN",
         train_loader,
         val_loader,
         test_loader,

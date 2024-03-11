@@ -16,27 +16,23 @@ class PixelCNN(nn.Module):
         # Convolution block of PixelCNN. We use dilation instead of downscaling
         self.conv_layers = nn.Sequential(
             *[
-                MaskedConvolution(c_in, c_hidden, mask_center=True),
+                MaskedConvolution(c_in, c_hidden, kernel_size=7, mask_center=True),
                 nn.ReLU(),
-                MaskedConvolution(c_hidden, c_hidden),
+                MaskedConvolution(c_hidden, c_hidden, kernel_size=7),
                 nn.ReLU(),
-                MaskedConvolution(c_hidden, c_hidden, dilation=2),
+                MaskedConvolution(c_hidden, c_hidden, kernel_size=7),
                 nn.ReLU(),
-                MaskedConvolution(c_hidden, c_hidden),
+                MaskedConvolution(c_hidden, c_hidden, kernel_size=7),
                 nn.ReLU(),
-                MaskedConvolution(c_hidden, c_hidden, dilation=4),
+                MaskedConvolution(c_hidden, c_hidden, kernel_size=7),
                 nn.ReLU(),
-                MaskedConvolution(c_hidden, c_hidden),
+                MaskedConvolution(c_hidden, c_hidden, kernel_size=7),
                 nn.ReLU(),
-                MaskedConvolution(c_hidden, c_hidden, dilation=2),
+                MaskedConvolution(c_hidden, c_hidden, kernel_size=1),
                 nn.ReLU(),
-                MaskedConvolution(c_hidden, c_hidden),
-                nn.ReLU(),
+                MaskedConvolution(c_hidden, c_in * 256, kernel_size=1),
             ]
         )
-        # Output classification convolution (1x1)
-        self.conv_out = nn.Conv2d(c_hidden, c_in * 256, kernel_size=1, padding=0)
-        # self.conv_out = nn.Conv2d(c_hidden, c_in * 2, kernel_size=1, padding=0)
 
     def forward(self, x):
         """Forward image through model and return logits for each pixel.
@@ -49,9 +45,6 @@ class PixelCNN(nn.Module):
         # x = (x.float() - 0.5) / 0.5
 
         out = self.conv_layers(x)
-        # 1x1 classification convolution
-        # Apply ELU before 1x1 convolution for non-linearity on residual connection
-        out = self.conv_out(F.elu(out))
 
         # Output dimensions: [Batch, Classes, Channels, Height, Width]
         out = out.reshape(out.shape[0], 256, out.shape[1] // 256, out.shape[2], out.shape[3])
