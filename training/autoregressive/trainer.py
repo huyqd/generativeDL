@@ -11,7 +11,7 @@ from torch import optim
 from torch.nn import functional as F
 from tqdm import tqdm
 
-from training.autoregressive.models import MODEL_DICT
+from models import MODEL_DICT
 
 wandb_logger = WandbLogger(log_model=False, project="autoregressive", save_dir="../../assets/logs/")
 

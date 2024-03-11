@@ -1,7 +1,7 @@
 import torch.nn.functional as F
 from torch import nn
 
-from training.autoregressive.models.masked import (
+from models.masked import (
     GatedMaskedConv,
     VerticalMaskedConvolution,
     HorizontalMaskedConvolution,

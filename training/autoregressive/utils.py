@@ -6,7 +6,7 @@ import torch
 import torchvision
 from torch import Tensor
 
-from training.autoregressive.models.masked import (
+from models.masked import (
     HorizontalMaskedConvolution,
     VerticalMaskedConvolution,
     MaskedConvolution,
