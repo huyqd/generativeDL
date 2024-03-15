@@ -6,7 +6,7 @@ from trainer import train_autoregressive
 
 
 class TrainFlow(FlowSpec):
-    @batch(cpu=8, memory=30 * 1024, gpu=1)
+    @batch(cpu=8, memory=32 * 1024, gpu=1)
     @step
     def start(self):
         L.seed_everything(42)

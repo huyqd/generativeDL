@@ -7,8 +7,6 @@ import torchvision
 from torch import Tensor
 
 from models.masked import (
-    HorizontalMaskedConvolution,
-    VerticalMaskedConvolution,
     MaskedConvolution,
 )
 
@@ -88,38 +86,38 @@ if __name__ == "__main__":
         print("Layer %i" % (l_idx + 2))
         show_center_recep_field(inp_img, masked_img)
 
-    # %% HorizontalStackConvolution
-    horiz_conv = HorizontalMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
-    horiz_conv.conv.weight.data.fill_(1)
-    horiz_conv.conv.bias.data.fill_(0)
-    horiz_img = horiz_conv(inp_img)
-    show_center_recep_field(inp_img, horiz_img)
-
-    # %% VerticalStackConvolution
-    vert_conv = VerticalMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
-    vert_conv.conv.weight.data.fill_(1)
-    vert_conv.conv.bias.data.fill_(0)
-    vert_img = vert_conv(inp_img)
-    show_center_recep_field(inp_img, vert_img)
-
-    # %% comebine
-    horiz_img = vert_img + horiz_img
-    show_center_recep_field(inp_img, horiz_img)
-
-    # %% layer
-    # Initialize convolutions with equal weight to all input pixels
-    horiz_conv = HorizontalMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
-    horiz_conv.conv.weight.data.fill_(1)
-    horiz_conv.conv.bias.data.fill_(0)
-    vert_conv = VerticalMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
-    vert_conv.conv.weight.data.fill_(1)
-    vert_conv.conv.bias.data.fill_(0)
-
-    # We reuse our convolutions for the 4 layers here. Note that in a standard network,
-    # we don't do that, and instead learn 4 separate convolution. As this cell is only for
-    # visualization purposes, we reuse the convolutions for all layers.
-    for l_idx in range(4):
-        vert_img = vert_conv(vert_img)
-        horiz_img = horiz_conv(horiz_img) + vert_img
-        print("Layer %i" % (l_idx + 2))
-        show_center_recep_field(inp_img, horiz_img)
+    # # %% HorizontalStackConvolution
+    # horiz_conv = HorizontalMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
+    # horiz_conv.conv.weight.data.fill_(1)
+    # horiz_conv.conv.bias.data.fill_(0)
+    # horiz_img = horiz_conv(inp_img)
+    # show_center_recep_field(inp_img, horiz_img)
+    #
+    # # %% VerticalStackConvolution
+    # vert_conv = VerticalMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
+    # vert_conv.conv.weight.data.fill_(1)
+    # vert_conv.conv.bias.data.fill_(0)
+    # vert_img = vert_conv(inp_img)
+    # show_center_recep_field(inp_img, vert_img)
+    #
+    # # %% comebine
+    # horiz_img = vert_img + horiz_img
+    # show_center_recep_field(inp_img, horiz_img)
+    #
+    # # %% layer
+    # # Initialize convolutions with equal weight to all input pixels
+    # horiz_conv = HorizontalMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
+    # horiz_conv.conv.weight.data.fill_(1)
+    # horiz_conv.conv.bias.data.fill_(0)
+    # vert_conv = VerticalMaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
+    # vert_conv.conv.weight.data.fill_(1)
+    # vert_conv.conv.bias.data.fill_(0)
+    #
+    # # We reuse our convolutions for the 4 layers here. Note that in a standard network,
+    # # we don't do that, and instead learn 4 separate convolution. As this cell is only for
+    # # visualization purposes, we reuse the convolutions for all layers.
+    # for l_idx in range(4):
+    #     vert_img = vert_conv(vert_img)
+    #     horiz_img = horiz_conv(horiz_img) + vert_img
+    #     print("Layer %i" % (l_idx + 2))
+    #     show_center_recep_field(inp_img, horiz_img)

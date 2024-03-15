@@ -76,7 +76,8 @@ class ARModule(L.LightningModule):
                         continue
                     # For efficiency, we only have to input the upper part of the image
                     # as all other parts will be skipped by the masked convolutions anyway
-                    pred = self(img[:, :, : h + 1, :])
+                    # pred = self(img[:, :, : h + 1, :])
+                    pred = self(img)
                     probs = F.softmax(pred[:, :, c, h, w], dim=1)
                     img[:, c, h, w] = torch.multinomial(probs, num_samples=1).squeeze(dim=-1)
         return img
