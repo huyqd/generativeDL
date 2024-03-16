@@ -85,6 +85,7 @@ class ARModule(L.LightningModule):
         optimizer = optim.Adam(self.parameters(), lr=1e-3)
         scheduler = optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.99)
         return [optimizer], [scheduler]
+        # return optimizer
 
     def training_step(self, batch, batch_idx):
         loss = self.likelihood(batch[0])

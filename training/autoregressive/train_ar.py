@@ -13,6 +13,13 @@ train_config = {
     "epochs": 10,
 }
 
-if __name__ == "__main__":
+
+def train():
     train_loader, val_loader, test_loader = load_deepul_data(train_config)
     model, result = train_autoregressive(train_loader, val_loader, test_loader, train_config)
+
+    return model, result
+
+
+if __name__ == "__main__":
+    model, result = train()

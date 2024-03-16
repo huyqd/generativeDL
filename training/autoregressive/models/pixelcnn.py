@@ -1,3 +1,4 @@
+import copy
 from collections import OrderedDict
 
 import torch.nn.functional as F
@@ -7,6 +8,7 @@ from models.masked import (
     VerticalMaskedConv2d,
     HorizontalMaskedConv2d,
 )
+from models.residual import ResidualBlock
 from torch import nn
 
 
@@ -57,6 +59,22 @@ class GatedPixelCNN(nn.Module):
         return out
 
 
+class LayerNorm(nn.LayerNorm):
+    def __init__(
+        self,
+        in_shape,
+        **kwargs,
+    ):
+        super().__init__(in_shape, **kwargs)
+
+        return
+
+    def forward(self, x):
+        x = x.permute(0, 2, 3, 1).contiguous()
+
+        return super().forward(x).permute(0, 3, 1, 2).contiguous()
+
+
 class PixelCNN(nn.Module):
     def __init__(
         self,
@@ -73,71 +91,61 @@ class PixelCNN(nn.Module):
         self.input_shape = input_shape
         self.n_bits = n_bits
         self.n_channels = input_shape[0]
+
+        initial_masked_conv = MaskedConv2d(
+            True,
+            in_channels=self.n_channels,
+            out_channels=n_filters,
+            kernel_size=kernel_size,
+            padding=kernel_size // 2,
+            **kwargs,
+        )
+        mid_masked_conv = MaskedConv2d(
+            False,
+            in_channels=n_filters,
+            out_channels=n_filters,
+            kernel_size=kernel_size,
+            padding=kernel_size // 2,
+            **kwargs,
+        )
+        mid_masked_conv = ResidualBlock(
+            n_filters=n_filters,
+        )
+        down_masked_conv = MaskedConv2d(
+            False,
+            in_channels=n_filters,
+            out_channels=n_filters,
+            kernel_size=1,
+            **kwargs,
+        )
+        final_masked_conv = MaskedConv2d(
+            False,
+            in_channels=n_filters,
+            out_channels=self.n_bits * self.n_channels,
+            kernel_size=1,
+            **kwargs,
+        )
+
         layers = OrderedDict(
             [
-                (
-                    "inital_masked_conv",
-                    MaskedConv2d(
-                        True,
-                        in_channels=self.n_channels,
-                        out_channels=n_filters,
-                        kernel_size=kernel_size,
-                        padding=kernel_size // 2,
-                        **kwargs,
-                    ),
-                ),
-                (
-                    "initial_relu",
-                    nn.ReLU(),
-                ),
+                ("inital_masked_conv", initial_masked_conv),
+                ("initial_relu", nn.ReLU()),
             ]
         )
+
         for l in range(n_layers):
             layers.update(
                 [
-                    (
-                        f"mid_masked_conv{l}",
-                        MaskedConv2d(
-                            False,
-                            in_channels=n_filters,
-                            out_channels=n_filters,
-                            kernel_size=kernel_size,
-                            padding=kernel_size // 2,
-                            **kwargs,
-                        ),
-                    ),
-                    (
-                        f"middle_relu{l}",
-                        nn.ReLU(),
-                    ),
+                    (f"mid_masked_conv{l}", copy.deepcopy(mid_masked_conv)),
+                    # (f"middle_relu{l}", nn.ReLU()),
                 ]
             )
+
         layers.update(
             [
-                (
-                    "down_masked_conv",
-                    MaskedConv2d(
-                        False,
-                        in_channels=n_filters,
-                        out_channels=n_filters,
-                        kernel_size=1,
-                        **kwargs,
-                    ),
-                ),
-                (
-                    "down_relu",
-                    nn.ReLU(),
-                ),
-                (
-                    "final_masked_conv",
-                    MaskedConv2d(
-                        False,
-                        in_channels=n_filters,
-                        out_channels=self.n_bits * self.n_channels,
-                        kernel_size=1,
-                        **kwargs,
-                    ),
-                ),
+                ("down_masked_conv", down_masked_conv),
+                ("down_relu", nn.ReLU()),
+                ("final_masked_conv", final_masked_conv),
             ]
         )
 
