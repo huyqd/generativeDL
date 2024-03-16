@@ -83,6 +83,7 @@ class PixelCNN(nn.Module):
         n_filters=64,
         kernel_size=7,
         n_layers=5,
+        use_resblock: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -100,17 +101,19 @@ class PixelCNN(nn.Module):
             padding=kernel_size // 2,
             **kwargs,
         )
-        mid_masked_conv = MaskedConv2d(
-            False,
-            in_channels=n_filters,
-            out_channels=n_filters,
-            kernel_size=kernel_size,
-            padding=kernel_size // 2,
-            **kwargs,
-        )
-        mid_masked_conv = ResidualBlock(
-            n_filters=n_filters,
-        )
+
+        if use_resblock:
+            mid_masked_conv = ResidualBlock(n_filters)
+        else:
+            mid_masked_conv = MaskedConv2d(
+                False,
+                in_channels=n_filters,
+                out_channels=n_filters,
+                kernel_size=kernel_size,
+                padding=kernel_size // 2,
+                **kwargs,
+            )
+
         down_masked_conv = MaskedConv2d(
             False,
             in_channels=n_filters,
@@ -134,12 +137,15 @@ class PixelCNN(nn.Module):
         )
 
         for l in range(n_layers):
-            layers.update(
-                [
-                    (f"mid_masked_conv{l}", copy.deepcopy(mid_masked_conv)),
-                    # (f"middle_relu{l}", nn.ReLU()),
-                ]
-            )
+            if use_resblock:
+                layers.update([(f"mid_residualblock{l}", copy.deepcopy(mid_masked_conv))])
+            else:
+                layers.update(
+                    [
+                        (f"mid_masked_conv{l}", copy.deepcopy(mid_masked_conv)),
+                        (f"middle_relu{l}", nn.ReLU()),
+                    ]
+                )
 
         layers.update(
             [
