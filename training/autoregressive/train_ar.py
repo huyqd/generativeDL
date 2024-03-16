@@ -1,18 +1,18 @@
-from data import load_data
+from data import load_deepul_data
 from trainer import train_autoregressive
 
-if __name__ == "__main__":
-    train_loader, val_loader, test_loader = load_data()
-    model, result = train_autoregressive(
-        "MyPixelCNN",
-        train_loader,
-        val_loader,
-        test_loader,
-        c_in=1,
-        c_hidden=64,
-    )
+train_config = {
+    "batch_size": 128,
+    "num_workers": 4,
+    "persistent_workers": True,
+    "pin_memory": True,
+    "data_name": "shapes",
+    "model_name": "PixelCNN",
+    "model_params": {},
+    "debug": False,
+    "epochs": 10,
+}
 
-    test_res = result["test"][0]
-    print(
-        f"Test bits per dimension: {test_res['test_loss'] if 'test_loss' in test_res else test_res['test_bpd']:4.3f}bpd"
-    )
+if __name__ == "__main__":
+    train_loader, val_loader, test_loader = load_deepul_data(train_config)
+    model, result = train_autoregressive(train_loader, val_loader, test_loader, train_config)

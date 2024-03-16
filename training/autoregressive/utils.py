@@ -7,7 +7,7 @@ import torchvision
 from torch import Tensor
 
 from models.masked import (
-    MaskedConvolution,
+    MaskedConv2d,
 )
 
 
@@ -71,12 +71,18 @@ if __name__ == "__main__":
     show_center_recep_field(inp_img, inp_img)
 
     # %% Normal MaskedConvolution
-    masked_conv = MaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=True)
-    subsequent_masked_conv = MaskedConvolution(c_in=1, c_out=1, kernel_size=3, mask_center=False)
-    masked_conv.conv.weight.data.fill_(1)
-    masked_conv.conv.bias.data.fill_(0)
-    subsequent_masked_conv.conv.weight.data.fill_(1)
-    subsequent_masked_conv.conv.bias.data.fill_(0)
+    masked_conv = MaskedConv2d(mask_center=True, in_channels=1, out_channels=1, kernel_size=3, padding=1)
+    subsequent_masked_conv = MaskedConv2d(
+        mask_center=False,
+        in_channels=1,
+        out_channels=1,
+        kernel_size=3,
+        padding=1,
+    )
+    masked_conv.weight.data.fill_(1)
+    masked_conv.bias.data.fill_(0)
+    subsequent_masked_conv.weight.data.fill_(1)
+    subsequent_masked_conv.bias.data.fill_(0)
     masked_img = masked_conv(inp_img)
     show_center_recep_field(inp_img, masked_img)
 

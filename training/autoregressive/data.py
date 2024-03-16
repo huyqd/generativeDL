@@ -10,7 +10,7 @@ from torchvision.datasets import MNIST
 current_path = Path(__file__).parent
 assets_path = current_path.parent.parent / "assets"
 mnist_path = assets_path / "mnist"
-deepul_path = assets_path / "deepul_data"
+deepul_path = assets_path / "deepul"
 
 
 def load_pickled_data(fname: str, include_labels: bool = False):
@@ -30,10 +30,36 @@ def load_pickled_data(fname: str, include_labels: bool = False):
     return train_data, test_data
 
 
-def load_shape_data():
-    train_data, test_data = load_pickled_data(deepul_path / "shapes.pkl")
+def load_deepul_data(train_config):
+    train_data, test_data = load_pickled_data(str(deepul_path / f"{train_config['data_name']}.pkl"))
+    train_data, test_data = (
+        torch.from_numpy(train_data).permute(0, 3, 2, 1),
+        torch.from_numpy(test_data).permute(0, 3, 2, 1),
+    )
+    train_set, test_set = data.TensorDataset(train_data), data.TensorDataset(test_data)
+    input_shape = tuple(train_data.shape[1:])
+    train_config["model_params"].update({"input_shape": input_shape, "n_bits": input_shape[0] * 2})
 
-    return train_data, test_data
+    train_loader = data.DataLoader(
+        train_set,
+        batch_size=train_config["batch_size"] * 2,
+        shuffle=True,
+        drop_last=True,
+        num_workers=train_config["num_workers"],
+        persistent_workers=train_config["persistent_workers"],
+        pin_memory=train_config["pin_memory"],
+    )
+    val_loader = data.DataLoader(
+        test_set,
+        batch_size=train_config["batch_size"],
+        shuffle=False,
+        drop_last=False,
+        num_workers=train_config["num_workers"],
+        persistent_workers=train_config["persistent_workers"],
+        pin_memory=train_config["pin_memory"],
+    )
+
+    return train_loader, val_loader, None
 
 
 # Convert images from 0-1 to 0-255 (integers). We use the long datatype as we will use the images as labels as well
@@ -41,14 +67,9 @@ def discretize(sample):
     return (sample * 255).to(torch.long)
 
 
-def quantize(sample):
-    return (sample > 0).to(torch.long)
-
-
-def load_data():
+def load_mnist_data():
     # Transformations applied on each image => only make them a tensor
     transform = transforms.Compose([transforms.ToTensor(), discretize])
-    # transform = transforms.Compose([transforms.ToTensor(), quantize])
 
     # Loading the training dataset. We need to split it into a training and validation part
     train_dataset = MNIST(root=mnist_path, train=True, transform=transform, download=True)
@@ -86,3 +107,15 @@ def load_data():
     )
 
     return train_loader, val_loader, test_loader
+
+
+if __name__ == "__main__":
+    train, _, _ = load_deepul_data(
+        {
+            "data_name": "shapes",
+            "batch_size": 128,
+            "num_workers": 4,
+            "persistent_workers": True,
+            "pin_memory": True,
+        }
+    )

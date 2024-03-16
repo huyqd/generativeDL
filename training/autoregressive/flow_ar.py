@@ -1,7 +1,7 @@
 import lightning as L
 from metaflow import FlowSpec, step, batch
 
-from data import load_data
+from data import load_mnist_data
 from trainer import train_autoregressive
 
 
@@ -11,7 +11,7 @@ class TrainFlow(FlowSpec):
     def start(self):
         L.seed_everything(42)
 
-        train_loader, val_loader, test_loader = load_data()
+        train_loader, val_loader, test_loader = load_mnist_data()
         model, result = train_autoregressive(
             "GatedPixelCNN",
             train_loader,

@@ -1,7 +1,6 @@
-from models.pixelcnn import GatedPixelCNN, PixelCNN, MyPixelCNN
+from models.pixelcnn import GatedPixelCNN, PixelCNN
 
 MODEL_DICT = {
     "GatedPixelCNN": GatedPixelCNN,
     "PixelCNN": PixelCNN,
-    "MyPixelCNN": MyPixelCNN,
 }

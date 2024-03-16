@@ -1,7 +1,6 @@
 import os
 
 import lightning as L
-import numpy as np
 import torch
 import torchvision
 from lightning import Callback
@@ -32,11 +31,11 @@ else:
 
 
 class ARModule(L.LightningModule):
-    def __init__(self, model_name, c_in, c_hidden):
+    def __init__(self, model_name, **kwargs):
         super().__init__()
         self.save_hyperparameters()
-        self.model = MODEL_DICT[model_name](c_in, c_hidden)
-        self.example_input_array = torch.randn(1, 1, 28, 28)
+        self.model = MODEL_DICT[model_name](**kwargs)
+        self.example_input_array = torch.randn(1, *self.hparams.input_shape)
 
     def forward(self, x):
         """Forward image through model and return logits for each pixel.
@@ -44,18 +43,19 @@ class ARModule(L.LightningModule):
         Args:
             x: Image tensor with integer values between 0 and 255.
         """
-        # Scale input from 0 to 255 back to -1 to 1
         return self.model(x)
 
     def likelihood(self, x):
         # Forward pass with bpd likelihood calculation
         pred = self.forward(x)
         nll = F.cross_entropy(pred, x, reduction="none")
-        bpd = nll.mean(dim=[1, 2, 3]) * np.log2(np.exp(1))
-        return bpd.mean()
+        # bpd = nll.mean(dim=[1, 2, 3]) * np.log2(np.exp(1))
+        # return bpd.mean()
+
+        return nll.mean()
 
     @torch.no_grad()
-    def sample(self, img_shape, img=None):
+    def sample(self, n_images, img=None):
         """Sampling function for the autoregressive model.
 
         Args:
@@ -65,6 +65,7 @@ class ARModule(L.LightningModule):
                              should be -1 in the input tensor.
         """
         # Create empty image
+        img_shape = (n_images, *self.hparams.input_shape)
         if img is None:
             img = torch.zeros(img_shape, dtype=torch.long).to(DEVICE) - 1
         # Generation loop
@@ -89,16 +90,16 @@ class ARModule(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         loss = self.likelihood(batch[0])
-        self.log("train_bpd", loss, prog_bar=True, on_step=True, on_epoch=True)
+        self.log("train_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         loss = self.likelihood(batch[0])
-        self.log("val_bpd", loss, prog_bar=True)
+        self.log("val_loss", loss, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         loss = self.likelihood(batch[0])
-        self.log("test_bpd", loss, prog_bar=True)
+        self.log("test_loss", loss, prog_bar=True)
 
 
 class GenerateCallback(Callback):
@@ -108,7 +109,7 @@ class GenerateCallback(Callback):
 
     @staticmethod
     def _log_sampling_images(trainer, pl_module, n_images=16):
-        samples = pl_module.sample(img_shape=(n_images, 1, 28, 28))
+        samples = pl_module.sample(n_images=n_images)
         nrow = min(n_images, 8)
         # grid = torchvision.utils.make_grid(samples.float(), nrow=nrow)
         grid = torchvision.utils.make_grid(samples.float(), nrow=nrow, pad_value=128)
@@ -123,21 +124,20 @@ class GenerateCallback(Callback):
 
 
 def train_autoregressive(
-    model_name,
-    train_loader,
-    val_loader,
-    test_loader,
-    debug=False,
+    train_loader: torch.utils.data.DataLoader,
+    val_loader: torch.utils.data.DataLoader,
+    test_loader: torch.utils.data.DataLoader,
+    train_config: dict,
     **kwargs,
 ):
     callbacks = [
-        ModelCheckpoint(save_weights_only=True, mode="min", monitor="val_bpd"),
+        ModelCheckpoint(save_weights_only=True, mode="min", monitor="val_loss"),
         LearningRateMonitor("epoch"),
         GenerateCallback(every_n_epochs=1),
     ]
     logger = wandb_logger
     overfit_batches = 0
-    if debug:
+    if train_config["debug"]:
         callbacks += [ModelSummary(max_depth=-1)]
         logger = None
         overfit_batches = 10
@@ -152,7 +152,7 @@ def train_autoregressive(
         default_root_dir=os.path.join(CHECKPOINT_PATH, "PixelCNN"),
         accelerator=ACCELERATOR,
         devices=1,
-        max_epochs=50,
+        max_epochs=train_config["epochs"],
         callbacks=callbacks,
         logger=logger,
         overfit_batches=overfit_batches,
@@ -166,13 +166,16 @@ def train_autoregressive(
         ckpt = torch.load(pretrained_filename, map_location=DEVICE)
         result = ckpt.get("result", None)
     else:
-        model = ARModule(model_name, **kwargs)
+        model = ARModule(train_config["model_name"], **train_config["model_params"])
         trainer.fit(model, train_loader, val_loader)
     model = model.to(DEVICE)
 
     if result is None:
         # Test best model on validation and test set
         val_result = trainer.test(model, dataloaders=val_loader, verbose=False)
-        test_result = trainer.test(model, dataloaders=test_loader, verbose=False)
-        result = {"test": test_result, "val": val_result}
+        result = {"val": val_result}
+        if test_loader is not None:
+            test_result = trainer.test(model, dataloaders=test_loader, verbose=False)
+            result["test"] = test_result
+
     return model, result

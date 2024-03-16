@@ -1,9 +1,10 @@
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 
-class BaseMaskedConvolution(nn.Module):
-    def __init__(self, c_in, c_out, mask, **kwargs):
+class BaseMaskedConv2d(nn.Conv2d):
+    def __init__(self, mask_center=None, *args, **kwargs):
         """Implements a convolution with mask applied on its weights.
 
         Args:
@@ -13,38 +14,39 @@ class BaseMaskedConvolution(nn.Module):
                    the convolution should be masked, and 1s otherwise.
             kwargs: Additional arguments for the convolution
         """
-        super().__init__()
+        super().__init__(*args, **kwargs)
         # For simplicity: calculate padding automatically
-        kernel_size = (mask.shape[0], mask.shape[1])
-        dilation = 1 if "dilation" not in kwargs else kwargs["dilation"]
-        padding = (dilation * (kernel_size[0] - 1) // 2, dilation * (kernel_size[1] - 1) // 2)
-        # Actual convolution
-        self.conv = nn.Conv2d(c_in, c_out, kernel_size, padding=padding, **kwargs)
+        self.register_buffer("mask", torch.ones(self.kernel_size[0], self.kernel_size[0]))
+        self.create_mask(mask_center)
 
-        # Mask as buffer => it is no parameter but still a tensor of the module
-        # (must be moved with the devices)
-        self.register_buffer("mask", mask[None, None])
+    def create_mask(self, mask_center):
+        kernel_size = self.kernel_size[0]
+        self.mask[(kernel_size // 2 + 1) :, :] = 0
+        self.mask[kernel_size // 2, kernel_size // 2 + 1 :] = 0
+
+        if mask_center:
+            self.mask[kernel_size // 2, kernel_size // 2] = 0
+
+        self.mask = self.mask[None, None]
 
     def forward(self, x):
-        self.conv.weight.data *= self.mask  # Ensures zero's at masked positions
-        return self.conv(x)
+        return F.conv2d(
+            x,
+            self.weight * self.mask,
+            bias=self.bias,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+        )
 
 
-class MaskedConvolution(BaseMaskedConvolution):
-    def __init__(self, c_in, c_out, kernel_size=3, mask_center=False, **kwargs):
-        mask = torch.ones(kernel_size, kernel_size)
-        mask[(kernel_size // 2 + 1) :, :] = 0
-        mask[kernel_size // 2, kernel_size // 2 + 1 :] = 0
-
-        # For the very first convolution, we will also mask the center row
-        if mask_center:
-            mask[kernel_size // 2, kernel_size // 2] = 0
-
-        super().__init__(c_in, c_out, mask, **kwargs)
+class MaskedConv2d(BaseMaskedConv2d):
+    def __init__(self, mask_center, *args, **kwargs):
+        super().__init__(mask_center=mask_center, *args, **kwargs)
 
 
-class VerticalMaskedConvolution(BaseMaskedConvolution):
-    def __init__(self, c_in, c_out, kernel_size=3, mask_center=False, **kwargs):
+class VerticalMaskedConv2d(BaseMaskedConv2d):
+    def __init__(self, in_channels, out_channels, kernel_size=3, mask_center=False, **kwargs):
         # Mask out all pixels below. For efficiency, we could also reduce the kernel
         # size in height, but for simplicity, we stick with masking here.
         mask = torch.ones(kernel_size, kernel_size)
@@ -54,10 +56,17 @@ class VerticalMaskedConvolution(BaseMaskedConvolution):
         if mask_center:
             mask[kernel_size // 2, :] = 0
 
-        super().__init__(c_in, c_out, mask, **kwargs)
+        super().__init__(
+            mask_center,
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            **kwargs,
+        )
+        self.mask = mask
 
 
-class HorizontalMaskedConvolution(BaseMaskedConvolution):
+class HorizontalMaskedConv2d(BaseMaskedConv2d):
     def __init__(self, c_in, c_out, kernel_size=3, mask_center=False, **kwargs):
         # Mask out all pixels on the left. Note that our kernel has a size of 1
         # in height because we only look at the pixel in the same row.
@@ -68,7 +77,14 @@ class HorizontalMaskedConvolution(BaseMaskedConvolution):
         if mask_center:
             mask[0, kernel_size // 2] = 0
 
-        super().__init__(c_in, c_out, mask, **kwargs)
+        super().__init__(
+            mask_center,
+            in_channels=c_in,
+            out_channels=c_out,
+            kernel_size=kernel_size,
+            **kwargs,
+        )
+        self.mask = mask
 
 
 class GatedMaskedConv(nn.Module):
@@ -79,8 +95,8 @@ class GatedMaskedConv(nn.Module):
     def __init__(self, c_in, **kwargs):
         """Gated Convolution block implemented the computation graph shown above."""
         super().__init__()
-        self.conv_vert = VerticalMaskedConvolution(c_in, c_out=2 * c_in, **kwargs)
-        self.conv_horiz = HorizontalMaskedConvolution(c_in, c_out=2 * c_in, **kwargs)
+        self.conv_vert = VerticalMaskedConv2d(c_in, out_channels=2 * c_in, **kwargs)
+        self.conv_horiz = HorizontalMaskedConv2d(c_in, c_out=2 * c_in, **kwargs)
         self.conv_vert_to_horiz = nn.Conv2d(2 * c_in, 2 * c_in, kernel_size=1, padding=0)
         self.conv_horiz_1x1 = nn.Conv2d(c_in, c_in, kernel_size=1, padding=0)
 
