@@ -6,7 +6,7 @@ train_config = {
     "num_workers": 4,
     "persistent_workers": True,
     "pin_memory": True,
-    "data_name": "shapes",
+    "data_name": "mnist",
     "model_name": "PixelCNN",
     "model_params": {},
     "debug": False,

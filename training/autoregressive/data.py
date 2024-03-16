@@ -32,10 +32,8 @@ def load_pickled_data(fname: str, include_labels: bool = False):
 
 def load_deepul_data(train_config):
     train_data, test_data = load_pickled_data(str(deepul_path / f"{train_config['data_name']}.pkl"))
-    train_data, test_data = (
-        torch.from_numpy(train_data).permute(0, 3, 2, 1),
-        torch.from_numpy(test_data).permute(0, 3, 2, 1),
-    )
+    train_data = torch.from_numpy(train_data.transpose(0, 3, 1, 2))
+    test_data = torch.from_numpy(test_data.transpose(0, 3, 1, 2))
     train_set, test_set = data.TensorDataset(train_data), data.TensorDataset(test_data)
     input_shape = tuple(train_data.shape[1:])
     train_config["model_params"].update({"input_shape": input_shape, "n_bits": input_shape[0] * 2})
