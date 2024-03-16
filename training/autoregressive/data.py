@@ -42,7 +42,7 @@ def load_deepul_data(train_config):
 
     train_loader = data.DataLoader(
         train_set,
-        batch_size=train_config["batch_size"] * 2,
+        batch_size=train_config["batch_size"],
         shuffle=True,
         drop_last=True,
         num_workers=train_config["num_workers"],

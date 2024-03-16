@@ -48,11 +48,9 @@ class ARModule(L.LightningModule):
     def likelihood(self, x):
         # Forward pass with bpd likelihood calculation
         pred = self.forward(x)
-        nll = F.cross_entropy(pred, x, reduction="none")
-        # bpd = nll.mean(dim=[1, 2, 3]) * np.log2(np.exp(1))
-        # return bpd.mean()
+        nll = F.cross_entropy(pred, x)
 
-        return nll.mean()
+        return nll
 
     @torch.no_grad()
     def sample(self, n_images, img=None):
@@ -86,7 +84,8 @@ class ARModule(L.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=1e-3)
         scheduler = optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.99)
-        return [optimizer], [scheduler]
+        # return [optimizer], [scheduler]
+        return optimizer
 
     def training_step(self, batch, batch_idx):
         loss = self.likelihood(batch[0])
@@ -108,11 +107,10 @@ class GenerateCallback(Callback):
         self.every_n_epochs = every_n_epochs
 
     @staticmethod
-    def _log_sampling_images(trainer, pl_module, n_images=16):
+    def _log_sampling_images(trainer, pl_module, n_images=64):
         samples = pl_module.sample(n_images=n_images)
         nrow = min(n_images, 8)
-        # grid = torchvision.utils.make_grid(samples.float(), nrow=nrow)
-        grid = torchvision.utils.make_grid(samples.float(), nrow=nrow, pad_value=128)
+        grid = torchvision.utils.make_grid(samples.float(), nrow=nrow)
         wandb_logger.log_image(key="Sampling", images=[grid], step=trainer.global_step)
 
     def on_fit_start(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
@@ -143,8 +141,7 @@ def train_autoregressive(
         overfit_batches = 10
 
     imgs = [train_loader.dataset[i][0].float() for i in range(32)]
-    # img_grid = torchvision.utils.make_grid(imgs, nrow=8)
-    img_grid = torchvision.utils.make_grid(imgs, nrow=8, value_range=(0, 255))
+    img_grid = torchvision.utils.make_grid(imgs, nrow=8)
     wandb_logger.log_image(key="Training data", images=[img_grid])
 
     # Create a PyTorch Lightning trainer with the generation callback
