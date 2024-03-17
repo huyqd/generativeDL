@@ -79,7 +79,7 @@ class PixelCNN(nn.Module):
     def __init__(
         self,
         input_shape,
-        n_bits,
+        n_colors,
         n_filters=64,
         kernel_size=7,
         n_layers=5,
@@ -90,7 +90,7 @@ class PixelCNN(nn.Module):
         assert n_layers >= 2
 
         self.input_shape = input_shape
-        self.n_bits = n_bits
+        self.n_colors = n_colors
         self.n_channels = input_shape[0]
 
         initial_masked_conv = MaskedConv2d(
@@ -124,7 +124,7 @@ class PixelCNN(nn.Module):
         final_masked_conv = MaskedConv2d(
             False,
             in_channels=n_filters,
-            out_channels=self.n_bits * self.n_channels,
+            out_channels=self.n_colors * self.n_channels,
             kernel_size=1,
             **kwargs,
         )
@@ -132,13 +132,19 @@ class PixelCNN(nn.Module):
         layers = OrderedDict(
             [
                 ("inital_masked_conv", initial_masked_conv),
+                ("initial_layer_norm", LayerNorm(n_filters)),
                 ("initial_relu", nn.ReLU()),
             ]
         )
 
         for l in range(n_layers):
             if use_resblock:
-                layers.update([(f"mid_residualblock{l}", copy.deepcopy(mid_masked_conv))])
+                layers.update(
+                    [
+                        (f"mid_residualblock{l}", copy.deepcopy(mid_masked_conv)),
+                        (f"mid_layer_norm{l}", LayerNorm(n_filters)),
+                    ]
+                )
             else:
                 layers.update(
                     [
@@ -159,7 +165,7 @@ class PixelCNN(nn.Module):
 
     def forward(self, x):
         batch_size = x.shape[0]
-        out = (x.float() / (self.n_bits - 1)) * 2 - 1
+        out = (x.float() / (self.n_colors - 1)) * 2 - 1
         out = self.net(out)
 
-        return out.view(batch_size, self.n_bits, *self.input_shape)
+        return out.view(batch_size, self.n_colors, *self.input_shape)

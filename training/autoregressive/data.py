@@ -36,7 +36,7 @@ def load_deepul_data(train_config):
     test_data = torch.from_numpy(test_data.transpose(0, 3, 1, 2))
     train_set, test_set = data.TensorDataset(train_data), data.TensorDataset(test_data)
     input_shape = tuple(train_data.shape[1:])
-    train_config["model_params"].update({"input_shape": input_shape, "n_bits": input_shape[0] * 2})
+    train_config["model_params"].update({"input_shape": input_shape, "n_colors": input_shape[0] + 1})
 
     train_loader = data.DataLoader(
         train_set,

@@ -107,7 +107,7 @@ class GenerateCallback(Callback):
         self.every_n_epochs = every_n_epochs
 
     @staticmethod
-    def _log_sampling_images(trainer, pl_module, n_images=64):
+    def _log_sampling_images(trainer: L.Trainer, pl_module: L.LightningModule, n_images: int = 32):
         samples = pl_module.sample(n_images=n_images)
         nrow = min(n_images, 8)
         grid = torchvision.utils.make_grid(samples.float(), nrow=nrow)
@@ -116,8 +116,8 @@ class GenerateCallback(Callback):
     def on_fit_start(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
         self._log_sampling_images(trainer, pl_module)
 
-    def on_train_epoch_end(self, trainer, pl_module):
-        if trainer.current_epoch % self.every_n_epochs == 0:
+    def on_train_epoch_end(self, trainer: L.Trainer, pl_module: L.LightningModule):
+        if trainer.current_epoch % self.every_n_epochs == 0 or trainer.current_epoch == trainer.max_epochs - 1:
             self._log_sampling_images(trainer, pl_module)
 
 
@@ -131,7 +131,7 @@ def train_autoregressive(
     callbacks = [
         ModelCheckpoint(save_weights_only=True, mode="min", monitor="val_loss"),
         LearningRateMonitor("epoch"),
-        GenerateCallback(every_n_epochs=1),
+        GenerateCallback(every_n_epochs=train_config["sampling_every_n_epochs"]),
     ]
     logger = wandb_logger
     overfit_batches = 0
@@ -153,6 +153,8 @@ def train_autoregressive(
         callbacks=callbacks,
         logger=logger,
         overfit_batches=overfit_batches,
+        gradient_clip_val=1.0,
+        gradient_clip_algorithm="norm",
     )
     result = None
     # Check whether pretrained model exists. If yes, load it and skip training
