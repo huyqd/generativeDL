@@ -13,6 +13,7 @@ class ResidualBlock(nn.Module):
     def __init__(self, n_filters):
         super().__init__()
         self.res_block = nn.Sequential(
+            nn.ReLU(),
             MaskedConv2d(
                 False,
                 in_channels=n_filters,
@@ -34,7 +35,6 @@ class ResidualBlock(nn.Module):
                 out_channels=n_filters,
                 kernel_size=1,
             ),
-            nn.ReLU(),
         )
 
     def forward(self, x):

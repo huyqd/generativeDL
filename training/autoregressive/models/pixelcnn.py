@@ -1,5 +1,4 @@
 import copy
-from collections import OrderedDict
 
 import torch.nn.functional as F
 from models.masked import (
@@ -102,17 +101,14 @@ class PixelCNN(nn.Module):
             **kwargs,
         )
 
-        if use_resblock:
-            mid_masked_conv = ResidualBlock(n_filters)
-        else:
-            mid_masked_conv = MaskedConv2d(
-                False,
-                in_channels=n_filters,
-                out_channels=n_filters,
-                kernel_size=kernel_size,
-                padding=kernel_size // 2,
-                **kwargs,
-            )
+        mid_masked_conv = MaskedConv2d(
+            False,
+            in_channels=n_filters,
+            out_channels=n_filters,
+            kernel_size=kernel_size,
+            padding=kernel_size // 2,
+            **kwargs,
+        )
 
         down_masked_conv = MaskedConv2d(
             False,
@@ -129,39 +125,18 @@ class PixelCNN(nn.Module):
             **kwargs,
         )
 
-        layers = OrderedDict(
-            [
-                ("inital_masked_conv", initial_masked_conv),
-                ("initial_layer_norm", LayerNorm(n_filters)),
-                ("initial_relu", nn.ReLU()),
-            ]
-        )
+        layers = [initial_masked_conv]
 
         for l in range(n_layers):
             if use_resblock:
-                layers.update(
-                    [
-                        (f"mid_residualblock{l}", copy.deepcopy(mid_masked_conv)),
-                        (f"mid_layer_norm{l}", LayerNorm(n_filters)),
-                    ]
-                )
+                layers.extend([LayerNorm(n_filters), ResidualBlock(n_filters)])
             else:
-                layers.update(
-                    [
-                        (f"mid_masked_conv{l}", copy.deepcopy(mid_masked_conv)),
-                        (f"middle_relu{l}", nn.ReLU()),
-                    ]
-                )
+                layers.extend([LayerNorm(n_filters), nn.ReLU(), copy.deepcopy(mid_masked_conv)])
+                # layers.extend([nn.ReLU(), copy.deepcopy(mid_masked_conv)])
 
-        layers.update(
-            [
-                ("down_masked_conv", down_masked_conv),
-                ("down_relu", nn.ReLU()),
-                ("final_masked_conv", final_masked_conv),
-            ]
-        )
+        layers.extend([nn.ReLU(), down_masked_conv, nn.ReLU(), final_masked_conv])
 
-        self.net = nn.Sequential(layers)
+        self.net = nn.Sequential(*layers)
 
     def forward(self, x):
         batch_size = x.shape[0]

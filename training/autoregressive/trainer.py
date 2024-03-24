@@ -48,7 +48,7 @@ class ARModule(L.LightningModule):
     def likelihood(self, x):
         # Forward pass with bpd likelihood calculation
         pred = self.forward(x)
-        nll = F.cross_entropy(pred, x)
+        nll = F.cross_entropy(pred, x.long())
 
         return nll
 
@@ -107,14 +107,14 @@ class GenerateCallback(Callback):
         self.every_n_epochs = every_n_epochs
 
     @staticmethod
-    def _log_sampling_images(trainer: L.Trainer, pl_module: L.LightningModule, n_images: int = 32):
+    def _log_sampling_images(trainer: L.Trainer, pl_module: L.LightningModule, n_images: int = 64):
         samples = pl_module.sample(n_images=n_images)
         nrow = min(n_images, 8)
         grid = torchvision.utils.make_grid(samples.float(), nrow=nrow)
         wandb_logger.log_image(key="Sampling", images=[grid], step=trainer.global_step)
 
-    def on_fit_start(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
-        self._log_sampling_images(trainer, pl_module)
+    # def on_fit_start(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
+    #     self._log_sampling_images(trainer, pl_module)
 
     def on_train_epoch_end(self, trainer: L.Trainer, pl_module: L.LightningModule):
         if trainer.current_epoch % self.every_n_epochs == 0 or trainer.current_epoch == trainer.max_epochs - 1:
@@ -126,17 +126,16 @@ def train_autoregressive(
     val_loader: torch.utils.data.DataLoader,
     test_loader: torch.utils.data.DataLoader,
     train_config: dict,
-    **kwargs,
 ):
     callbacks = [
         ModelCheckpoint(save_weights_only=True, mode="min", monitor="val_loss"),
         LearningRateMonitor("epoch"),
         GenerateCallback(every_n_epochs=train_config["sampling_every_n_epochs"]),
+        ModelSummary(max_depth=3),
     ]
     logger = wandb_logger
     overfit_batches = 0
     if train_config["debug"]:
-        callbacks += [ModelSummary(max_depth=-1)]
         logger = None
         overfit_batches = 10
 

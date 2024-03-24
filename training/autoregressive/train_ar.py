@@ -8,13 +8,13 @@ train_config = {
     "num_workers": 4,
     "persistent_workers": True,
     "pin_memory": True,
-    "epochs": 15,
+    "epochs": 10,
     "data_name": "mnist",
     "model_name": "PixelCNN",
     "model_params": {
-        "use_resblock": True,
-        "n_filters": 120,
-        "n_layers": 8,
+        # "use_resblock": True,
+        # "n_filters": 120,
+        # "n_layers": 8,
     },
     "sampling_every_n_epochs": 5,
 }
@@ -22,7 +22,7 @@ train_config = {
 
 @click.command()
 @click.option("--debug", default=False)
-@click.option("--data-name", default="shapes_colored")
+@click.option("--data-name", default="shapes")
 def train(debug, data_name):
     train_config["debug"] = debug
     train_config["data_name"] = data_name
