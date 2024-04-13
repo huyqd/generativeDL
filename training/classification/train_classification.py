@@ -54,22 +54,48 @@ if __name__ == "__main__":
     #     },
     # )
 
+    # model, results = train_model(
+    #     model_name="DenseNet",
+    #     train_loader=train_loader,
+    #     val_loader=val_loader,
+    #     test_loader=test_loader,
+    #     model_hparams={
+    #         "num_classes": 10,
+    #         "num_layers": [6, 6, 6, 6],
+    #         "bn_size": 2,
+    #         "growth_rate": 16,
+    #         "act_fn_name": "relu",
+    #     },
+    #     optimizer_name="Adam",
+    #     optimizer_hparams={"lr": 1e-3, "weight_decay": 1e-4},
+    #     trainer_args={
+    #         "overfit_batches": 10,
+    #         "callbacks": [
+    #             ModelSummary(max_depth=-1),
+    #         ],
+    #     },
+    # )
+
     model, results = train_model(
-        model_name="DenseNet",
+        model_name="VisionTransformer",
         train_loader=train_loader,
         val_loader=val_loader,
         test_loader=test_loader,
         model_hparams={
+            "embed_dim": 256,
+            "hidden_dim": 512,
+            "num_heads": 8,
+            "num_layers": 6,
+            "patch_size": 4,
+            "num_channels": 3,
+            "num_patches": 64,
             "num_classes": 10,
-            "num_layers": [6, 6, 6, 6],
-            "bn_size": 2,
-            "growth_rate": 16,
-            "act_fn_name": "relu",
+            "dropout": 0.2,
         },
         optimizer_name="Adam",
-        optimizer_hparams={"lr": 1e-3, "weight_decay": 1e-4},
+        optimizer_hparams={"lr": 3e-4, "weight_decay": 1e-4},
         trainer_args={
-            "overfit_batches": 10,
+            # "overfit_batches": 10,
             "callbacks": [
                 ModelSummary(max_depth=-1),
             ],
