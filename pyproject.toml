@@ -6,24 +6,21 @@ authors = ["huyqd <quanghuy.dang210@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-torch = "2.2.0"
-torchaudio = "^2.2.0"
+torch = "^2.3.0"
+torchaudio = "^2.3.0"
+torchvision = "^0.18.0"
 lightning = "^2.1.4"
 metaflow = "^2.11.2"
 wandb = "^0.16.4"
-torchvision = "^0.17.0"
 tiktoken = "^0.6.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.2.2"
 seaborn = "^0.13.2"
 matplotlib = "^3.8.2"
 plotly = "^5.18.0"
 jupyter = "^1.0.0"
-ruff = "^0.2.1"
 pre-commit = "^3.6.1"
-
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.2.2"
 
 [tool.ruff]
 line-length = 120
